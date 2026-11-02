@@ -1,0 +1,900 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מתכנן ביקורים</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<style>
+/* פריסה: אפליקציית שטח לטלפון — כותרת לבנה דקה, מסך אחד בכל פעם, סרגל ניווט צף בתחתית */
+:root {
+  --bg: #f3f5f7;
+  --surface: #ffffff;
+  --surface-2: #f5f7f9;
+  --ink: #0f1b2d;
+  --muted: #64748b;
+  --line: #e5e9ee;
+  --accent: #0b7a64;
+  --accent-strong: #08624f;
+  --accent-ink: #ffffff;
+  --accent-soft: #e2f3ee;
+  --danger: #c2372b;
+  --c-green: #22a05a;
+  --c-yellow: #eab308;
+  --c-orange: #f07c1e;
+  --c-blue: #2f6fe4;
+  --c-red: #dc3b2f;
+  --c-black: #1f2937;
+  --shadow-sm: 0 1px 2px rgba(15, 27, 45, .06), 0 1px 3px rgba(15, 27, 45, .05);
+  --shadow-md: 0 4px 14px rgba(15, 27, 45, .08), 0 1px 3px rgba(15, 27, 45, .06);
+  --shadow-lg: 0 12px 32px rgba(15, 27, 45, .14), 0 2px 6px rgba(15, 27, 45, .06);
+  --font-body: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --radius: 16px;
+  --nav-h: 64px;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0d1218; --surface: #161d26; --surface-2: #1d2631; --ink: #e9eef4; --muted: #94a3b8; --line: #263241;
+    --accent: #34c7a2; --accent-strong: #5ad6b6; --accent-ink: #062018; --accent-soft: #143a32; --danger: #ff8a80;
+    --c-black: #9aa4b2;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 4px 14px rgba(0,0,0,.45); --shadow-lg: 0 12px 32px rgba(0,0,0,.55);
+    color-scheme: dark;
+  }
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
+  display: flex; flex-direction: column; overflow: hidden;
+}
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* כותרת */
+header.top {
+  display: flex; align-items: center; gap: 10px; position: relative; z-index: 20;
+  padding: calc(10px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) 10px max(16px, env(safe-area-inset-left, 0px));
+  background: var(--surface); box-shadow: var(--shadow-sm);
+}
+.logo {
+  width: 36px; height: 36px; border-radius: 11px; flex: none; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(145deg, var(--accent), var(--accent-strong)); color: #fff; box-shadow: var(--shadow-sm);
+}
+.logo svg { width: 20px; height: 20px; }
+.brand { flex: 1; min-width: 0; line-height: 1.15; }
+header.top h1 { font-size: 17px; font-weight: 800; margin: 0; letter-spacing: -.01em; }
+header.top .sub { color: var(--muted); font-size: 13px; }
+.icon-btn {
+  border: 0; background: var(--surface-2); border-radius: 12px;
+  height: 40px; padding: 0 14px; display: inline-flex; align-items: center; gap: 6px; font-weight: 700; font-size: 15px;
+}
+.icon-btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 12px rgba(11, 122, 100, .28); }
+
+main { flex: 1; position: relative; overflow: hidden; }
+.view { position: absolute; inset: 0; overflow-y: auto; padding: 20px max(16px, env(safe-area-inset-right, 0px)) 28px max(16px, env(safe-area-inset-left, 0px)); }
+.view[hidden] { display: none; }
+.view > * { max-width: 720px; margin-inline: auto; }
+#view-map { padding: 0; }
+#view-map > * { max-width: none; }
+#map { position: absolute; inset: 0; }
+
+/* סרגל ניווט צף */
+nav.tabs {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+  background: var(--surface); box-shadow: var(--shadow-lg); border-radius: 22px;
+  margin: 8px max(12px, env(safe-area-inset-right, 0px)) calc(10px + env(safe-area-inset-bottom, 0px)) max(12px, env(safe-area-inset-left, 0px));
+  padding: 6px; position: relative; z-index: 20;
+}
+nav.tabs button {
+  height: 56px; border: 0; background: none; color: var(--muted); border-radius: 16px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; font-size: 12.5px; font-weight: 600;
+  transition: background .15s, color .15s;
+}
+nav.tabs button svg { width: 23px; height: 23px; }
+nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); font-weight: 800; }
+.badge { background: var(--c-red); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; padding: 0 6px; margin-inline-start: 4px; }
+
+/* כלים על המפה */
+.map-tools {
+  position: absolute; z-index: 500; top: 12px; inset-inline: 12px;
+  display: flex; flex-direction: column; gap: 8px; pointer-events: none;
+}
+.map-tools > * { pointer-events: auto; }
+.search-wrap { position: relative; }
+.search-wrap svg { position: absolute; inset-inline-start: 16px; top: 50%; transform: translateY(-50%); width: 20px; height: 20px; color: var(--muted); pointer-events: none; }
+.search {
+  width: 100%; height: 50px; border-radius: 16px; border: 0;
+  background: var(--surface); padding-inline: 46px 16px; box-shadow: var(--shadow-lg); font-size: 16px;
+}
+.search::placeholder { color: var(--muted); }
+.chips { display: flex; gap: 6px; overflow-x: auto; padding: 2px 2px 6px; scrollbar-width: none; }
+.chips::-webkit-scrollbar { display: none; }
+.chip {
+  flex: none; display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 6px 0 12px;
+  border-radius: 999px; border: 0; background: var(--surface); font-size: 13.5px; font-weight: 600;
+  box-shadow: var(--shadow-md); transition: opacity .15s;
+}
+.chip[aria-pressed="false"] { opacity: .5; box-shadow: var(--shadow-sm); }
+.chip .n { background: var(--surface-2); color: var(--muted); font-weight: 700; font-size: 12px; border-radius: 999px; min-width: 24px; height: 22px; padding: 0 7px; display: inline-flex; align-items: center; justify-content: center; font-variant-numeric: tabular-nums; }
+.dot { width: 11px; height: 11px; border-radius: 50%; flex: none; display: inline-block; box-shadow: 0 0 0 2px var(--surface), 0 0 0 3px rgba(15,27,45,.08); }
+.dot.green { background: var(--c-green); } .dot.yellow { background: var(--c-yellow); }
+.dot.orange { background: var(--c-orange); } .dot.blue { background: var(--c-blue); }
+.dot.red { background: var(--c-red); } .dot.black { background: var(--c-black); }
+.search-results { background: var(--surface); border-radius: var(--radius); max-height: 50vh; overflow-y: auto; box-shadow: var(--shadow-lg); }
+.search-results .row { padding: 12px 16px !important; border-bottom: 1px solid var(--line) !important; }
+
+/* כותרות, כרטיסים ורשימות */
+h2 { font-size: 24px; font-weight: 800; margin: 0 0 16px; letter-spacing: -.02em; text-wrap: balance; }
+h3 { font-size: 13px; margin: 26px 0 10px; color: var(--muted); font-weight: 700; letter-spacing: .04em; }
+.card { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow-sm); }
+.list { display: flex; flex-direction: column; gap: 10px; }
+.row { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.row .grow { flex: 1; min-width: 0; }
+.name { font-weight: 700; font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meta { color: var(--muted); font-size: 14px; }
+.note { font-size: 14.5px; background: var(--surface-2); border-radius: 12px; padding: 10px 12px; margin-top: 10px; }
+.note b { font-weight: 700; }
+.followup { box-shadow: var(--shadow-sm), inset -4px 0 0 var(--c-orange); }
+.overdue { box-shadow: var(--shadow-sm), inset -4px 0 0 var(--c-red); }
+.note.followup { box-shadow: inset -3px 0 0 var(--c-orange); }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+.btn {
+  height: 42px; padding: 0 16px; border-radius: 12px; border: 0; background: var(--surface-2);
+  font-weight: 700; font-size: 15px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; text-decoration: none; color: var(--ink);
+  transition: transform .08s, background .15s;
+}
+.btn:active { transform: scale(.98); }
+.card .btn:not(.primary) { background: var(--surface-2); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); box-shadow: 0 4px 12px rgba(11, 122, 100, .25); }
+.btn.big { height: 52px; font-size: 16px; flex: 1; }
+.btn.small { height: 34px; padding: 0 12px; font-size: 14px; border-radius: 10px; }
+.btn:disabled { opacity: .45; }
+.stop-n {
+  width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 800; color: #fff; flex: none; font-variant-numeric: tabular-nums; box-shadow: 0 2px 6px rgba(15,27,45,.2);
+}
+.done-mark { color: var(--c-green); font-weight: 800; font-size: 14px; background: color-mix(in srgb, var(--c-green) 12%, transparent); padding: 3px 10px; border-radius: 999px; }
+.field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
+.field label { font-weight: 700; font-size: 14px; }
+.field input, .field select, .field textarea {
+  border: 1.5px solid var(--line); border-radius: 12px; background: var(--surface); padding: 11px 14px; min-height: 48px; width: 100%;
+  transition: border-color .15s;
+}
+.field input:focus, .field select:focus, .field textarea:focus { border-color: var(--accent); outline: none; }
+.field textarea { min-height: 120px; resize: vertical; }
+.hint { color: var(--muted); font-size: 13px; }
+.toggle-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.toggle {
+  border: 1.5px solid var(--line); background: var(--surface); border-radius: 12px; height: 42px; padding: 0 14px; font-weight: 600; font-size: 15px;
+  transition: all .12s;
+}
+.toggle[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.empty { color: var(--muted); text-align: center; padding: 28px 12px; }
+.card.empty { box-shadow: none; border: 1.5px dashed var(--line); background: transparent; }
+.stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.stat { background: var(--surface); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); }
+.stat:first-child { background: linear-gradient(145deg, var(--accent), var(--accent-strong)); color: var(--accent-ink); }
+.stat:first-child .l { color: inherit; opacity: .85; }
+.stat .v { font-size: 30px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; letter-spacing: -.02em; }
+.stat .l { color: var(--muted); font-size: 13px; margin-top: 4px; }
+.toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
+.toolbar input[type=date], .toolbar select { height: 42px; border: 0; border-radius: 12px; background: var(--surface); padding: 0 12px; box-shadow: var(--shadow-sm); font-weight: 600; }
+.summary-line { font-size: 14px; color: var(--accent); font-weight: 600; margin: 10px 0 0; }
+
+/* חלון שנפתח מלמטה */
+.sheet-wrap { position: fixed; inset: 0; z-index: 1000; background: rgba(15, 27, 45, .45); backdrop-filter: blur(2px); display: flex; align-items: flex-end; justify-content: center; }
+.sheet-wrap[hidden] { display: none; }
+.sheet {
+  background: var(--bg); width: 100%; max-width: 600px; max-height: 92%; overflow-y: auto;
+  border-radius: 24px 24px 0 0; box-shadow: var(--shadow-lg);
+  padding: 10px max(18px, env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) max(18px, env(safe-area-inset-left, 0px));
+  animation: rise .22s ease-out;
+}
+@keyframes rise { from { transform: translateY(24px); opacity: .6; } to { transform: none; opacity: 1; } }
+.sheet::before { content: ""; display: block; width: 40px; height: 5px; border-radius: 3px; background: var(--line); margin: 0 auto 12px; }
+.sheet-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.sheet-head h2 { flex: 1; margin: 0; font-size: 21px; }
+.close { border: 0; background: var(--surface); width: 36px; height: 36px; border-radius: 50%; font-size: 20px; line-height: 1; box-shadow: var(--shadow-sm); }
+.sticky-save { position: sticky; bottom: calc(-18px - env(safe-area-inset-bottom, 0px)); background: linear-gradient(transparent, var(--bg) 30%); padding: 18px 0 6px; display: flex; gap: 8px; }
+
+.toast {
+  position: fixed; z-index: 2000; bottom: calc(var(--nav-h) + 40px + env(safe-area-inset-bottom, 0px)); left: 50%; transform: translateX(-50%);
+  background: var(--ink); color: var(--bg); padding: 11px 20px; border-radius: 14px; font-weight: 700; box-shadow: var(--shadow-lg); white-space: nowrap;
+}
+.toast[hidden] { display: none; }
+.loading { position: fixed; inset: 0; display: flex; flex-direction: column; gap: 14px; align-items: center; justify-content: center; background: var(--bg); z-index: 3000; font-size: 17px; color: var(--muted); font-weight: 600; }
+.loading::before { content: ""; width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--accent-soft); border-top-color: var(--accent); animation: spin .8s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.loading[hidden] { display: none; }
+
+/* כרטיס עסק */
+.linkish { cursor: pointer; }
+.linkish:hover { color: var(--accent); }
+.card-head { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+.pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 999px; padding: 3px 11px; font-size: 13px; font-weight: 700; background: var(--surface); box-shadow: var(--shadow-sm); }
+.kv { display: grid; grid-template-columns: max-content 1fr; gap: 10px 16px; font-size: 15px; margin: 0; }
+.kv dt { color: var(--muted); font-size: 14px; }
+.kv dd { margin: 0; min-width: 0; overflow-wrap: anywhere; font-weight: 500; }
+.timeline { display: flex; flex-direction: column; gap: 10px; position: relative; }
+.tl-item { background: var(--surface); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow-sm); }
+.tl-top { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tl-date { font-weight: 800; }
+.tl-chips { display: flex; flex-wrap: wrap; gap: 5px; margin-top: 8px; }
+.tl-chips span { background: var(--accent-soft); color: var(--accent-strong); font-weight: 600; border-radius: 999px; padding: 2px 10px; font-size: 13px; }
+.quick-note { display: flex; gap: 8px; align-items: stretch; }
+.quick-note textarea { flex: 1; min-height: 52px; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 14px; background: var(--surface); resize: vertical; }
+
+/* מפה */
+.leaflet-container { background: #e9edf0; font-family: var(--font-body); }
+.leaflet-popup-content-wrapper { border-radius: 16px; box-shadow: var(--shadow-lg); }
+.leaflet-popup-content { margin: 14px 16px; font-family: var(--font-body); font-size: 15px; min-width: 230px; direction: rtl; line-height: 1.45; }
+.leaflet-bar { border: 0 !important; box-shadow: var(--shadow-md) !important; border-radius: 12px !important; overflow: hidden; }
+.leaflet-bar a { width: 38px !important; height: 38px !important; line-height: 38px !important; color: var(--ink) !important; }
+.leaflet-bottom.leaflet-left { margin-bottom: 6px; }
+.pop-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.pop-actions .btn { height: 34px; font-size: 14px; padding: 0 11px; border-radius: 10px; }
+.route-pin { background: none; border: 0; }
+.route-pin span { display: flex; width: 28px; height: 28px; border-radius: 50%; align-items: center; justify-content: center; color: #fff; font-weight: 800; font-size: 13px; border: 2.5px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,.35); }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
+</style>
+</head>
+<body>
+<div class="loading" id="loading">טוען את הלקוחות…</div>
+
+<header class="top">
+  <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
+  <div class="brand"><h1>מתכנן ביקורים</h1><div class="sub" id="today-label"></div></div>
+  <button class="icon-btn primary" id="btn-add" type="button" aria-label="הוספת עסק">+ עסק</button>
+</header>
+
+<main>
+  <section class="view" id="view-map">
+    <div id="map" role="region" aria-label="מפת לקוחות ועסקים"></div>
+    <div class="map-tools">
+      <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="search" id="map-search" type="search" placeholder="חיפוש עסק, יישוב או טלפון" autocomplete="off" aria-label="חיפוש"></div>
+      <div class="search-results" id="map-search-results" hidden></div>
+      <div class="chips" id="legend"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-plan" hidden>
+    <h2>בניית קו ליום</h2>
+    <div class="toolbar">
+      <input type="date" id="plan-date" aria-label="תאריך">
+      <span class="meta" id="plan-count"></span>
+    </div>
+    <div class="list" id="plan-stops"></div>
+    <div class="summary-line" id="plan-summary"></div>
+    <div class="btns">
+      <button class="btn primary" id="btn-optimize" type="button">סדר לי את הדרך הקצרה</button>
+      <button class="btn" id="btn-save-route" type="button">שמור קו</button>
+    </div>
+    <div class="btns" id="plan-links"></div>
+
+    <h3>הוספת עצירה</h3>
+    <div class="field">
+      <input type="search" id="plan-search" placeholder="הקלד שם עסק או יישוב" autocomplete="off" aria-label="חיפוש עסק להוספה">
+    </div>
+    <div class="list" id="plan-search-results"></div>
+
+    <h3>הצעות באזור</h3>
+    <div class="toolbar">
+      <label for="plan-radius" class="meta">ברדיוס</label>
+      <select id="plan-radius">
+        <option value="5">5 ק״מ</option>
+        <option value="10" selected>10 ק״מ</option>
+        <option value="20">20 ק״מ</option>
+        <option value="35">35 ק״מ</option>
+      </select>
+      <span class="meta">מהעצירות שכבר בקו</span>
+    </div>
+    <div class="list" id="plan-suggest"></div>
+  </section>
+
+  <section class="view" id="view-today" hidden>
+    <div class="toolbar">
+      <h2 style="margin:0;flex:1">הקו שלי</h2>
+      <input type="date" id="today-date" aria-label="תאריך">
+    </div>
+    <div class="list" id="today-list"></div>
+  </section>
+
+  <section class="view" id="view-open" hidden>
+    <h2>מה מחכה לי</h2>
+    <div class="stats" id="stats"></div>
+    <h3>פעולות המשך</h3>
+    <div class="list" id="open-followups"></div>
+    <h3>לקוחות שלא ביקרתי יותר מחודשיים</h3>
+    <div class="toolbar"><select id="open-region" aria-label="אזור"></select></div>
+    <div class="list" id="open-stale"></div>
+  </section>
+</main>
+
+<nav class="tabs" role="tablist">
+  <button type="button" role="tab" data-view="map" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>מפה</button>
+  <button type="button" role="tab" data-view="plan" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>בניית קו</button>
+  <button type="button" role="tab" data-view="today" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>בדרך</button>
+  <button type="button" role="tab" data-view="open" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>מה פתוח<span class="badge" id="open-badge" hidden></span></span></button>
+</nav>
+
+<div class="sheet-wrap" id="sheet" hidden>
+  <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
+    <div class="sheet-head"><h2 id="sheet-title"></h2><button class="close" type="button" id="sheet-close" aria-label="סגירה">×</button></div>
+    <div id="sheet-body"></div>
+  </div>
+</div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+/* ===== חיבור לשרת (גוגל) ===== */
+function api(fn) {
+  var args = Array.prototype.slice.call(arguments, 1);
+  return new Promise(function (resolve, reject) {
+    var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+    runner[fn].apply(runner, args);
+  });
+}
+
+/* ===== מצב ===== */
+var S = { businesses: [], visits: [], routes: [], settings: {} };
+var byId = {};
+var plan = { date: '', stops: [], km: null, minutes: null };
+var COLORS = {
+  green: { label: 'ביקרתי החודש', css: 'var(--c-green)', hex: '#22a05a' },
+  yellow: { label: 'לא ביקרתי מעל חודש', css: 'var(--c-yellow)', hex: '#eab308' },
+  orange: { label: 'לא ביקרתי מעל חודשיים', css: 'var(--c-orange)', hex: '#f07c1e' },
+  blue: { label: 'עסק פוטנציאלי', css: 'var(--c-blue)', hex: '#2f6fe4' },
+  red: { label: 'לא מעוניין', css: 'var(--c-red)', hex: '#dc3b2f' },
+  black: { label: 'נסגר / לא פעיל', css: 'var(--c-black)', hex: '#1f2937' }
+};
+var shown = { green: true, yellow: true, orange: true, blue: true, red: true, black: false };
+var RESULT = { note: 'הערה', done: 'ביקרתי', closed_door: 'היה סגור', owner_absent: 'הבעלים לא היה', phone: 'שיחת טלפון', cancelled: 'בוטל' };
+
+function h(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
+function iso(d) { var z = new Date(d.getTime() - d.getTimezoneOffset() * 60000); return z.toISOString().slice(0, 10); }
+function todayIso() { return iso(new Date()); }
+function addDays(isoStr, n) { var d = new Date(isoStr + 'T12:00:00'); d.setDate(d.getDate() + n); return iso(d); }
+function daysBetween(a, b) { return Math.round((new Date(b + 'T12:00:00') - new Date(a + 'T12:00:00')) / 864e5); }
+function fmtDate(isoStr) {
+  if (!isoStr) return '';
+  var d = new Date(isoStr + 'T12:00:00');
+  var days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+  return 'יום ' + days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
+}
+function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600); }
+
+function load(data) {
+  S = data;
+  byId = {};
+  S.businesses.forEach(function (b) { b.visits = []; byId[b.id] = b; });
+  S.visits.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
+  S.visits.forEach(function (v) { if (byId[v.businessId]) byId[v.businessId].visits.push(v); });
+  S.businesses.forEach(function (b) {
+    var done = b.visits.filter(function (v) { return v.result === 'done' || v.result === 'owner_absent'; });
+    b.lastVisit = done.length ? done[0].date : null;
+    b.lastNote = b.visits.filter(function (v) { return v.text; })[0] || null;
+    b.openFollow = b.visits.filter(function (v) { return v.followupOpen; });
+    b.color = colorOf(b);
+  });
+  renderAll();
+}
+
+function colorOf(b) {
+  var st = b.status || 'פעיל';
+  if (st === 'נסגר' || st === 'לא רלוונטי' || st === 'לא פעיל') return 'black';
+  if (st === 'לא מעוניין') return 'red';
+  if (b.kind === 'lead') return 'blue';
+  var yellowDays = Number(S.settings['ימים לצהוב'] || 30), orangeDays = Number(S.settings['ימים לכתום'] || 60);
+  if (!b.lastVisit) return 'orange';
+  var d = daysBetween(b.lastVisit, todayIso());
+  if (d <= yellowDays) return 'green';
+  if (d <= orangeDays) return 'yellow';
+  return 'orange';
+}
+function sinceText(b) {
+  if (b.kind === 'lead' && !b.lastVisit) return 'עוד לא ביקרתי';
+  if (!b.lastVisit) return 'אין ביקור רשום';
+  var d = daysBetween(b.lastVisit, todayIso());
+  return d === 0 ? 'ביקרתי היום' : 'ביקור אחרון לפני ' + d + ' ימים';
+}
+function km(a, b) {
+  var R = 6371, toR = Math.PI / 180;
+  var dLat = (b.lat - a.lat) * toR, dLng = (b.lng - a.lng) * toR;
+  var x = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a.lat * toR) * Math.cos(b.lat * toR) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+  return R * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+function navTarget(b) { return b.lat != null ? b.lat + ',' + b.lng : (b.address || b.name); }
+function wazeUrl(b) { return b.lat != null ? 'https://waze.com/ul?ll=' + b.lat + ',' + b.lng + '&navigate=yes' : 'https://waze.com/ul?q=' + encodeURIComponent(b.address || b.name) + '&navigate=yes'; }
+function gmapsOne(b) { return 'https://www.google.com/maps/dir/?api=1&destination=' + encodeURIComponent(navTarget(b)) + '&travelmode=driving'; }
+function telHref(p) { return 'tel:' + String(p).replace(/[^0-9+]/g, ''); }
+
+/* ===== מפה ===== */
+var map, layer, routeLayer;
+function initMap() {
+  map = L.map('map', { zoomControl: false }).setView([32.1, 34.85], 9);
+  L.control.zoom({ position: 'bottomleft' }).addTo(map);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO' }).addTo(map);
+  layer = L.layerGroup().addTo(map);
+  routeLayer = L.layerGroup().addTo(map);
+  map.on('popupopen', function (e) {
+    var el = e.popup.getElement();
+    el.querySelectorAll('[data-act]').forEach(function (btn) { btn.addEventListener('click', onAction); });
+  });
+}
+function renderMap() {
+  layer.clearLayers();
+  var seen = {};
+  S.businesses.forEach(function (b) {
+    if (b.lat == null || !shown[b.color]) return;
+    var key = b.lat.toFixed(4) + ',' + b.lng.toFixed(4);
+    var n = seen[key] = (seen[key] || 0) + 1;
+    var lat = b.lat, lng = b.lng;
+    if (n > 1) { var ang = n * 2.4, r = 0.0012 * Math.sqrt(n); lat += r * Math.cos(ang); lng += r * Math.sin(ang) * 1.2; }
+    var m = L.circleMarker([lat, lng], {
+      radius: 8, color: '#fff', weight: 2.5, fillColor: COLORS[b.color].hex, fillOpacity: b.approx ? 0.7 : 1
+    });
+    m.bindPopup(function () { return popupHtml(b); }, { maxWidth: 300 });
+    m.addTo(layer);
+  });
+  renderLegend();
+}
+function popupHtml(b) {
+  var html = '<div class="name linkish" style="white-space:normal" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div>'
+    + '<div class="meta"><span class="dot ' + b.color + '"></span> ' + (b.kind === 'lead' ? 'עסק פוטנציאלי' : 'לקוח קיים') + ' · ' + h(sinceText(b)) + '</div>';
+  if (b.address) html += '<div class="meta">' + h(b.address) + (b.approx ? ' <i>(מיקום משוער)</i>' : '') + '</div>';
+  if (b.phone) html += '<div class="meta" dir="ltr" style="text-align:right">' + h(b.phone) + (b.contact ? ' · ' + h(b.contact) : '') + '</div>';
+  if (b.lastNote) html += '<div class="note"><b>' + fmtDate(b.lastNote.date) + ':</b> ' + h(b.lastNote.text) + '</div>';
+  if (b.openFollow.length) html += '<div class="note followup"><b>פתוח:</b> ' + h(b.openFollow[0].followup) + '</div>';
+  html += '<div class="pop-actions">'
+    + '<button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'
+    + '<button class="btn small" data-act="summary" data-id="' + b.id + '">סיכום ביקור</button>'
+    + '<a class="btn small" href="' + wazeUrl(b) + '" target="_blank" rel="noopener">Waze</a>'
+    + '<button class="btn small" data-act="card" data-id="' + b.id + '">כרטיס עסק</button></div>';
+  return html;
+}
+function renderLegend() {
+  var counts = {};
+  S.businesses.forEach(function (b) { counts[b.color] = (counts[b.color] || 0) + 1; });
+  var el = document.getElementById('legend');
+  el.innerHTML = Object.keys(COLORS).map(function (c) {
+    return '<button type="button" class="chip" data-color="' + c + '" aria-pressed="' + shown[c] + '"><span class="dot ' + c + '"></span>' + COLORS[c].label + ' <span class="n">' + (counts[c] || 0) + '</span></button>';
+  }).join('');
+  el.querySelectorAll('.chip').forEach(function (chip) {
+    chip.addEventListener('click', function () { shown[chip.dataset.color] = !shown[chip.dataset.color]; renderMap(); });
+  });
+}
+function drawPlanOnMap() {
+  routeLayer.clearLayers();
+  var pts = plan.stops.map(function (id) { return byId[id]; }).filter(function (b) { return b && b.lat != null; });
+  if (!pts.length) return;
+  L.polyline(pts.map(function (b) { return [b.lat, b.lng]; }), { color: '#0b7a64', weight: 4, opacity: .75, dashArray: '2 8', lineCap: 'round' }).addTo(routeLayer);
+  pts.forEach(function (b, i) {
+    L.marker([b.lat, b.lng], { icon: L.divIcon({ className: 'route-pin', html: '<span style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span>', iconSize: [26, 26] }) })
+      .bindPopup(function () { return popupHtml(b); }).addTo(routeLayer);
+  });
+}
+
+/* ===== חיפוש ===== */
+function search(q) {
+  q = q.trim();
+  if (q.length < 2) return [];
+  return S.businesses.filter(function (b) {
+    return (b.name + ' ' + (b.address || '') + ' ' + (b.region || '') + ' ' + (b.phone || '') + ' ' + (b.contact || '')).indexOf(q) >= 0;
+  }).slice(0, 12);
+}
+function bizRow(b, extra, buttons) {
+  return '<div class="card"><div class="row"><span class="dot ' + b.color + '"></span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || 'אין כתובת') + (extra ? ' · ' + extra : '') + '</div></div>' + (buttons || '') + '</div></div>';
+}
+
+/* ===== בניית קו ===== */
+function setPlanDate(d) {
+  plan.date = d;
+  var r = S.routes.filter(function (x) { return x.date === d; })[0];
+  plan.stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
+  plan.km = plan.minutes = null;
+  document.getElementById('plan-date').value = d;
+  renderPlan();
+}
+function renderPlan() {
+  document.getElementById('plan-count').textContent = plan.stops.length + ' עצירות · ' + fmtDate(plan.date);
+  var el = document.getElementById('plan-stops');
+  if (!plan.stops.length) el.innerHTML = '<div class="card empty">עוד אין עצירות ביום הזה. חפש עסק למטה, או לחץ "+ לקו" על נקודה במפה.</div>';
+  else el.innerHTML = plan.stops.map(function (id, i) {
+    var b = byId[id];
+    return '<div class="card"><div class="row"><span class="stop-n" style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + ' · ' + h(sinceText(b)) + '</div></div>'
+      + '<button class="btn small" data-act="up" data-i="' + i + '" aria-label="למעלה"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+      + '<button class="btn small" data-act="remove" data-i="' + i + '" aria-label="הסרה">✕</button></div></div>';
+  }).join('');
+  document.getElementById('plan-summary').textContent = plan.km ? 'לפי גוגל: כ-' + plan.km + ' ק״מ וכ-' + Math.floor(plan.minutes / 60) + ':' + String(plan.minutes % 60).padStart(2, '0') + ' שעות נהיגה (בלי זמן העצירות).' : '';
+  renderPlanLinks();
+  renderSuggest();
+  drawPlanOnMap();
+  bindActions(document.getElementById('view-plan'));
+}
+function routeLinks(stops) {
+  var bs = stops.map(function (id) { return byId[id]; }).filter(Boolean);
+  var start = S.settings['כתובת יציאה'];
+  var links = [], chunk = 9, i = 0, part = 1;
+  while (i < bs.length) {
+    var seg = bs.slice(i, i + chunk);
+    var origin = i === 0 ? (start || '') : navTarget(bs[i - 1]);
+    var dest = seg[seg.length - 1];
+    var wps = seg.slice(0, -1).map(navTarget);
+    var url = 'https://www.google.com/maps/dir/?api=1&travelmode=driving&destination=' + encodeURIComponent(navTarget(dest))
+      + (origin ? '&origin=' + encodeURIComponent(origin) : '')
+      + (wps.length ? '&waypoints=' + encodeURIComponent(wps.join('|')) : '');
+    links.push({ url: url, label: bs.length > chunk ? 'גוגל מפות — חלק ' + part : 'פתח את כל הקו בגוגל מפות' });
+    i += chunk; part++;
+  }
+  return links;
+}
+function renderPlanLinks() {
+  var el = document.getElementById('plan-links');
+  el.innerHTML = plan.stops.length ? routeLinks(plan.stops).map(function (l) { return '<a class="btn" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>'; }).join('') : '';
+}
+function priority(b) {
+  var due = b.openFollow.some(function (v) { return v.followupDate && v.followupDate <= addDays(plan.date || todayIso(), 0); });
+  if (due) return { score: 0, why: 'פעולת המשך שהגיע זמנה' };
+  if (b.openFollow.length) return { score: 1, why: 'יש פעולת המשך פתוחה' };
+  if (b.color === 'orange') return { score: 2, why: sinceText(b) };
+  if (b.color === 'yellow') return { score: 3, why: sinceText(b) };
+  if (b.color === 'blue') return { score: 4, why: b.lastVisit ? sinceText(b) : 'עסק חדש, עוד לא ביקרתי' };
+  return { score: 6, why: sinceText(b) };
+}
+function renderSuggest() {
+  var el = document.getElementById('plan-suggest');
+  var anchors = plan.stops.map(function (id) { return byId[id]; }).filter(function (b) { return b.lat != null; });
+  if (!anchors.length) { el.innerHTML = '<div class="empty">הוסף עצירה אחת לפחות, ואציע לך עסקים קרובים שכדאי לבקר בהם.</div>'; return; }
+  var radius = Number(document.getElementById('plan-radius').value);
+  var list = S.businesses.filter(function (b) {
+    return b.lat != null && plan.stops.indexOf(b.id) < 0 && b.color !== 'red' && b.color !== 'black' && b.color !== 'green';
+  }).map(function (b) {
+    var d = Math.min.apply(null, anchors.map(function (a) { return km(a, b); }));
+    var p = priority(b);
+    return { b: b, d: d, p: p };
+  }).filter(function (x) { return x.d <= radius; }).sort(function (x, y) { return x.p.score - y.p.score || x.d - y.d; }).slice(0, 25);
+  el.innerHTML = list.length ? list.map(function (x) {
+    return bizRow(x.b, h(x.p.why) + ' · ' + x.d.toFixed(1) + ' ק״מ', '<button class="btn small primary" data-act="add-plan" data-id="' + x.b.id + '">+ לקו</button>');
+  }).join('') : '<div class="empty">אין הצעות ברדיוס הזה. נסה רדיוס גדול יותר.</div>';
+  bindActions(el);
+}
+function addToPlan(id) {
+  if (plan.stops.indexOf(id) >= 0) { toast('כבר בקו'); return; }
+  plan.stops.push(id); plan.km = null;
+  renderPlan();
+  toast('נוסף לקו של ' + fmtDate(plan.date));
+}
+
+/* ===== בדרך (היום) ===== */
+function renderToday() {
+  var d = document.getElementById('today-date').value || todayIso();
+  var r = S.routes.filter(function (x) { return x.date === d; })[0];
+  var stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
+  var el = document.getElementById('today-list');
+  if (!stops.length) { el.innerHTML = '<div class="card empty">אין קו שמור ל' + fmtDate(d) + '. בנה אותו במסך "בניית קו".</div>'; return; }
+  var links = routeLinks(stops).map(function (l) { return '<a class="btn" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>'; }).join('');
+  el.innerHTML = '<div class="btns" style="margin-top:0">' + links + '</div>' + stops.map(function (id, i) {
+    var b = byId[id];
+    var todayV = b.visits.filter(function (v) { return v.date === d; })[0];
+    var html = '<div class="card"><div class="row"><span class="stop-n" style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + '</div></div>'
+      + (todayV ? '<span class="done-mark">✓ ' + h(RESULT[todayV.result] || '') + '</span>' : '') + '</div>';
+    if (b.phone) html += '<div class="meta" style="margin-top:6px">טלפון: <a href="' + telHref(b.phone) + '" dir="ltr">' + h(b.phone) + '</a>' + (b.contact ? ' · ' + h(b.contact) : '') + '</div>';
+    if (b.note) html += '<div class="note"><b>הכנה:</b> ' + h(b.note) + '</div>';
+    if (b.lastNote && (!todayV || b.lastNote.id !== todayV.id)) html += '<div class="note"><b>בפעם הקודמת (' + fmtDate(b.lastNote.date) + '):</b> ' + h(b.lastNote.text) + '</div>';
+    if (b.openFollow.length) html += '<div class="note followup"><b>הבטחתי:</b> ' + h(b.openFollow[0].followup) + '</div>';
+    if (todayV && todayV.text) html += '<div class="note"><b>היום:</b> ' + h(todayV.text) + '</div>';
+    html += '<div class="btns"><button class="btn primary big" data-act="summary" data-id="' + b.id + '">' + (todayV ? 'עריכה' : 'סיכום ביקור') + '</button>'
+      + '<a class="btn big" href="' + wazeUrl(b) + '" target="_blank" rel="noopener">Waze</a>'
+      + '<a class="btn big" href="' + gmapsOne(b) + '" target="_blank" rel="noopener">גוגל</a></div></div>';
+    return html;
+  }).join('');
+  bindActions(el);
+}
+
+/* ===== מה פתוח ===== */
+function renderOpen() {
+  var t = todayIso(), month = t.slice(0, 7);
+  var follow = [];
+  S.businesses.forEach(function (b) { b.openFollow.forEach(function (v) { follow.push({ b: b, v: v }); }); });
+  follow.sort(function (x, y) { return (x.v.followupDate || '9999') < (y.v.followupDate || '9999') ? -1 : 1; });
+  var overdue = follow.filter(function (x) { return x.v.followupDate && x.v.followupDate < t; }).length;
+  var badge = document.getElementById('open-badge');
+  badge.hidden = !overdue; badge.textContent = overdue;
+  var monthVisits = S.visits.filter(function (v) { return v.date.slice(0, 7) === month && v.result !== 'cancelled'; });
+  var newLeadsVisited = monthVisits.filter(function (v) { return byId[v.businessId] && byId[v.businessId].kind === 'lead'; }).length;
+  document.getElementById('stats').innerHTML =
+    '<div class="stat"><div class="v">' + monthVisits.length + '</div><div class="l">ביקורים החודש</div></div>'
+    + '<div class="stat"><div class="v">' + newLeadsVisited + '</div><div class="l">מתוכם בעסקים חדשים</div></div>'
+    + '<div class="stat"><div class="v">' + follow.length + '</div><div class="l">פעולות פתוחות' + (overdue ? ' (' + overdue + ' באיחור)' : '') + '</div></div>';
+  var el = document.getElementById('open-followups');
+  el.innerHTML = follow.length ? follow.map(function (x) {
+    var late = x.v.followupDate && x.v.followupDate < t;
+    return '<div class="card followup' + (late ? ' overdue' : '') + '"><div class="row"><span class="dot ' + x.b.color + '"></span><div class="grow"><div class="name linkish" data-act="card" data-id="' + x.b.id + '">' + h(x.b.name) + '</div>'
+      + '<div class="meta">' + (x.v.followupDate ? (late ? 'באיחור · ' : '') + 'עד ' + fmtDate(x.v.followupDate) : 'בלי תאריך') + ' · מביקור ב-' + fmtDate(x.v.date) + '</div></div></div>'
+      + '<div class="note">' + h(x.v.followup) + '</div>'
+      + '<div class="btns"><button class="btn small primary" data-act="close-follow" data-v="' + x.v.id + '">בוצע ✓</button><button class="btn small" data-act="add-plan" data-id="' + x.b.id + '">+ לקו</button>'
+      + (x.b.phone ? '<a class="btn small" href="' + telHref(x.b.phone) + '">התקשר</a>' : '') + '</div></div>';
+  }).join('') : '<div class="empty">אין פעולות פתוחות.</div>';
+
+  var regions = {};
+  var stale = S.businesses.filter(function (b) { return b.kind === 'client' && b.color === 'orange'; });
+  stale.forEach(function (b) { var r = b.region || 'בלי אזור'; regions[r] = (regions[r] || 0) + 1; });
+  var sel = document.getElementById('open-region');
+  var cur = sel.value || 'הכול';
+  sel.innerHTML = '<option value="הכול">כל האזורים (' + stale.length + ')</option>' + Object.keys(regions).sort(function (a, b) { return regions[b] - regions[a]; }).map(function (r) {
+    return '<option value="' + h(r) + '"' + (r === cur ? ' selected' : '') + '>' + h(r) + ' (' + regions[r] + ')</option>';
+  }).join('');
+  var list = stale.filter(function (b) { return cur === 'הכול' || (b.region || 'בלי אזור') === cur; });
+  document.getElementById('open-stale').innerHTML = list.map(function (b) {
+    return bizRow(b, h(sinceText(b)), '<button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>');
+  }).join('') || '<div class="empty">אין.</div>';
+  bindActions(document.getElementById('view-open'));
+}
+
+/* ===== חלון סיכום ביקור ===== */
+var CHIPS = ['השארתי טעימות', 'הצגתי מוצר', 'נתתי מחירון', 'קיבלתי טלפון', 'ביקשו הצעת מחיר', 'הזמינו', 'דיברתי עם הבעלים', 'דיברתי עם עובד'];
+function openSheet(title, html) {
+  document.getElementById('sheet-title').textContent = title;
+  document.getElementById('sheet-body').innerHTML = html;
+  document.getElementById('sheet').hidden = false;
+  document.querySelector('.sheet').scrollTop = 0;
+}
+function closeSheet() { document.getElementById('sheet').hidden = true; }
+function openSummary(id, visitId, backToCard) {
+  var b = byId[id];
+  var d = (document.getElementById('view-today').hidden ? todayIso() : document.getElementById('today-date').value) || todayIso();
+  var v = visitId ? b.visits.filter(function (x) { return x.id === visitId; })[0]
+    : b.visits.filter(function (x) { return x.date === d && x.result !== 'note'; })[0];
+  v = v || { result: 'done', chips: [], text: '', followup: '', followupDate: '', interest: '' };
+  if (v.date) d = v.date;
+  var html = '<div class="meta" style="margin-bottom:14px">' + fmtDate(d) + (b.lastNote && b.lastNote.id !== v.id ? ' · בפעם הקודמת: ' + h(b.lastNote.text) : '') + '</div>'
+    + '<div class="field"><label>מה היה</label><div class="toggle-group" data-group="result">'
+    + ['done', 'owner_absent', 'closed_door', 'phone', 'note'].map(function (k) { return '<button type="button" class="toggle" data-val="' + k + '" aria-pressed="' + (v.result === k) + '">' + RESULT[k] + '</button>'; }).join('') + '</div></div>'
+    + '<div class="field"><label>במה מדובר (אפשר כמה)</label><div class="toggle-group" data-group="chips" data-multi="1">'
+    + CHIPS.map(function (c) { return '<button type="button" class="toggle" data-val="' + c + '" aria-pressed="' + (v.chips.indexOf(c) >= 0) + '">' + c + '</button>'; }).join('') + '</div></div>'
+    + '<div class="field"><label for="s-text">מה נאמר</label><textarea id="s-text" placeholder="לדוגמה: הבעלים לא היה, דיברתי עם העובדת, אוהבים את הקצף. לחזור ביום שלישי.">' + h(v.text) + '</textarea>'
+    + '<span class="hint">טיפ: לחץ על סמל המיקרופון 🎤 במקלדת של הטלפון ודבר — הטלפון יכתוב בשבילך.</span></div>'
+    + '<div class="field"><label>התעניינות</label><div class="toggle-group" data-group="interest">'
+    + ['חם', 'פושר', 'קר'].map(function (k) { return '<button type="button" class="toggle" data-val="' + k + '" aria-pressed="' + (v.interest === k) + '">' + { 'חם': '🔥 חם', 'פושר': '🙂 פושר', 'קר': '❄️ קר' }[k] + '</button>'; }).join('') + '</div></div>'
+    + '<div class="field"><label for="s-follow">פעולת המשך</label><input id="s-follow" placeholder="לדוגמה: לחזור עם טעימות של שוקו" value="' + h(v.followup) + '">'
+    + '<div class="toggle-group" data-group="fdate" style="margin-top:6px">'
+    + [['מחר', 1], ['בעוד שבוע', 7], ['בעוד שבועיים', 14], ['בעוד חודש', 30]].map(function (x) { return '<button type="button" class="toggle" data-val="' + addDays(d, x[1]) + '" aria-pressed="' + (v.followupDate === addDays(d, x[1])) + '">' + x[0] + '</button>'; }).join('')
+    + '</div><input id="s-fdate" type="date" value="' + h(v.followupDate || '') + '" aria-label="תאריך המשך" style="margin-top:6px"></div>'
+    + '<div class="field"><label>לשנות את מצב העסק?</label><div class="toggle-group" data-group="newStatus">'
+    + '<button type="button" class="toggle" data-val="" aria-pressed="true">בלי שינוי</button>'
+    + (b.kind === 'lead' ? '<button type="button" class="toggle" data-val="פעיל">🎉 נסגר — לקוח חדש</button>' : '')
+    + '<button type="button" class="toggle" data-val="לא מעוניין">לא מעוניין כרגע</button>'
+    + '<button type="button" class="toggle" data-val="נסגר">העסק נסגר / לא רלוונטי</button></div></div>'
+    + '<div class="sticky-save"><button type="button" class="btn primary big" id="s-save">שמירה</button></div>';
+  openSheet(b.name, html);
+  var body = document.getElementById('sheet-body');
+  body.querySelectorAll('.toggle-group').forEach(function (g) {
+    g.addEventListener('click', function (e) {
+      var t = e.target.closest('.toggle'); if (!t) return;
+      if (g.dataset.multi) t.setAttribute('aria-pressed', t.getAttribute('aria-pressed') !== 'true');
+      else g.querySelectorAll('.toggle').forEach(function (x) { x.setAttribute('aria-pressed', x === t); });
+      if (g.dataset.group === 'fdate') document.getElementById('s-fdate').value = t.dataset.val;
+    });
+  });
+  function pick(name) { var t = body.querySelector('[data-group="' + name + '"] [aria-pressed="true"]'); return t ? t.dataset.val : ''; }
+  document.getElementById('s-save').addEventListener('click', function () {
+    var btn = this; btn.disabled = true; btn.textContent = 'שומר…';
+    var payload = {
+      id: v.id, businessId: id, date: d, result: pick('result') || 'done',
+      chips: Array.prototype.map.call(body.querySelectorAll('[data-group="chips"] [aria-pressed="true"]'), function (x) { return x.dataset.val; }),
+      text: document.getElementById('s-text').value.trim(), interest: pick('interest'),
+      followup: document.getElementById('s-follow').value.trim(), followupDate: document.getElementById('s-fdate').value,
+      newStatus: pick('newStatus')
+    };
+    api('saveVisit', payload).then(function (data) { load(data); if (backToCard) openCard(id); else closeSheet(); toast('הסיכום נשמר'); })
+      .catch(function (err) { btn.disabled = false; btn.textContent = 'שמירה'; toast('לא נשמר: ' + (err.message || err)); });
+  });
+}
+
+/* ===== כרטיס עסק ===== */
+var STATUS_TEXT = { green: 'ביקרתי החודש', yellow: 'לא ביקרתי מעל חודש', orange: 'לא ביקרתי מעל חודשיים', blue: 'עסק פוטנציאלי', red: 'לא מעוניין', black: 'נסגר / לא פעיל' };
+function webHref(w) {
+  w = String(w).trim();
+  if (/^https?:\/\//.test(w)) return w;
+  if (w.charAt(0) === '@') return 'https://instagram.com/' + w.slice(1);
+  return 'https://' + w;
+}
+function openCard(id) {
+  var b = byId[id];
+  var done = b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'cancelled'; });
+  var html = '<div class="card-head"><span class="pill"><span class="dot ' + b.color + '"></span>' + STATUS_TEXT[b.color] + '</span>'
+    + (b.kind === 'lead' ? '' : '<span class="pill">לקוח קיים</span>')
+    + (b.region ? '<span class="pill">' + h(b.region) + '</span>' : '') + '</div>'
+    + '<div class="meta" style="margin-bottom:12px">' + h(sinceText(b)) + ' · ' + done.length + ' ביקורים רשומים</div>'
+    + '<div class="btns" style="margin-top:0">'
+    + '<button class="btn primary" data-act="summary-card" data-id="' + b.id + '">+ סיכום ביקור</button>'
+    + '<button class="btn" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'
+    + (b.phone ? '<a class="btn" href="' + telHref(b.phone) + '">התקשר</a>' : '')
+    + '<a class="btn" href="' + wazeUrl(b) + '" target="_blank" rel="noopener">Waze</a>'
+    + '<button class="btn" data-act="edit-card" data-id="' + b.id + '">עריכת פרטים</button></div>';
+
+  html += '<h3>פרטים</h3><div class="card"><dl class="kv">';
+  var rows = [['איש קשר', h(b.contact)], ['טלפון', b.phone ? '<span dir="ltr">' + h(b.phone) + '</span>' : ''],
+    ['כתובת', h(b.address) + (b.address && b.approx ? ' <span class="meta">(מיקום משוער)</span>' : '')],
+    ['שעות פתיחה', h(b.hours)], ['מה לוקח', h(b.takes)], ['אימייל', b.email ? '<span dir="ltr">' + h(b.email) + '</span>' : ''],
+    ['אתר / אינסטגרם', b.web ? '<a href="' + h(webHref(b.web)) + '" target="_blank" rel="noopener" dir="ltr">' + h(b.web) + '</a>' : ''],
+    ['שם חברה / ח.פ', h(b.company)], ['הערה קבועה', h(b.note)]];
+  var any = false;
+  rows.forEach(function (r) { if (r[1]) { any = true; html += '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; } });
+  html += '</dl>' + (any ? '' : '<div class="meta">עוד אין פרטים. לחץ "עריכת פרטים" כדי להוסיף.</div>') + '</div>';
+
+  if (b.openFollow.length) {
+    html += '<h3>פעולות המשך פתוחות</h3><div class="list">' + b.openFollow.map(function (v) {
+      var late = v.followupDate && v.followupDate < todayIso();
+      return '<div class="card followup' + (late ? ' overdue' : '') + '"><div>' + h(v.followup) + '</div><div class="meta">'
+        + (v.followupDate ? (late ? 'באיחור · ' : '') + 'עד ' + fmtDate(v.followupDate) : 'בלי תאריך') + '</div>'
+        + '<div class="btns"><button class="btn small primary" data-act="close-follow-card" data-v="' + v.id + '" data-id="' + b.id + '">בוצע ✓</button></div></div>';
+    }).join('') + '</div>';
+  }
+
+  html += '<h3>הוספת הערה מהירה</h3><div class="quick-note"><textarea id="qn-text" placeholder="משהו שחשוב לזכור על העסק (אפשר להכתיב במיקרופון של המקלדת)"></textarea>'
+    + '<button class="btn primary" id="qn-save" type="button">שמור</button></div>';
+
+  html += '<h3>היסטוריה</h3>';
+  if (!b.visits.length) html += '<div class="empty">עוד אין ביקורים או הערות.</div>';
+  else html += '<div class="timeline">' + b.visits.map(function (v) {
+    return '<div class="tl-item"><div class="tl-top"><span class="tl-date">' + fmtDate(v.date) + '</span>'
+      + '<span class="pill">' + h(RESULT[v.result] || v.result || '') + '</span>'
+      + (v.interest ? '<span class="pill">' + h({ 'חם': '🔥 חם', 'פושר': '🙂 פושר', 'קר': '❄️ קר' }[v.interest] || v.interest) + '</span>' : '')
+      + '<span style="flex:1"></span><button class="btn small" data-act="edit-visit" data-id="' + b.id + '" data-v="' + v.id + '">עריכה</button></div>'
+      + (v.chips && v.chips.length ? '<div class="tl-chips">' + v.chips.map(function (c) { return '<span>' + h(c) + '</span>'; }).join('') + '</div>' : '')
+      + (v.text ? '<div style="margin-top:6px">' + h(v.text) + '</div>' : '')
+      + (v.followup ? '<div class="meta" style="margin-top:4px">המשך: ' + h(v.followup) + (v.followupDate ? ' (' + fmtDate(v.followupDate) + ')' : '') + (v.followupOpen ? '' : ' ✓') + '</div>' : '')
+      + '</div>';
+  }).join('') + '</div>';
+
+  openSheet(b.name, html);
+  var body = document.getElementById('sheet-body');
+  bindActions(body);
+  document.getElementById('qn-save').addEventListener('click', function () {
+    var text = document.getElementById('qn-text').value.trim();
+    if (!text) { toast('כתוב משהו קודם'); return; }
+    var btn = this; btn.disabled = true;
+    api('saveVisit', { businessId: id, date: todayIso(), result: 'note', chips: [], text: text, followup: '', followupDate: '', interest: '' })
+      .then(function (data) { load(data); openCard(id); toast('ההערה נשמרה'); })
+      .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
+  });
+}
+
+/* ===== הוספה ועריכה של עסק ===== */
+function openBizForm(id, backToCard) {
+  var b = id ? byId[id] : { kind: 'lead', status: 'פעיל' };
+  var regions = {}; S.businesses.forEach(function (x) { if (x.region) regions[x.region] = 1; });
+  var html = '<div class="field"><label for="f-name">שם העסק</label><input id="f-name" value="' + h(b.name || '') + '"></div>'
+    + '<div class="field"><label>סוג</label><div class="toggle-group" data-group="kind">'
+    + '<button type="button" class="toggle" data-val="lead" aria-pressed="' + (b.kind === 'lead') + '">עסק פוטנציאלי</button>'
+    + '<button type="button" class="toggle" data-val="client" aria-pressed="' + (b.kind === 'client') + '">לקוח קיים</button></div></div>'
+    + '<div class="field"><label for="f-address">כתובת</label><input id="f-address" value="' + h(b.address || '') + '" placeholder="רחוב, מספר, יישוב"><span class="hint">גוגל ימקם את הכתובת על המפה לבד.</span></div>'
+    + '<div class="field"><label for="f-phone">טלפון</label><input id="f-phone" type="tel" dir="ltr" value="' + h(b.phone || '') + '"></div>'
+    + '<div class="field"><label for="f-contact">איש קשר</label><input id="f-contact" value="' + h(b.contact || '') + '"></div>'
+    + '<div class="field"><label for="f-region">אזור</label><input id="f-region" list="f-regions" value="' + h(b.region || '') + '"><datalist id="f-regions">' + Object.keys(regions).map(function (r) { return '<option value="' + h(r) + '">'; }).join('') + '</datalist></div>'
+    + '<div class="field"><label for="f-status">מצב</label><select id="f-status">' + ['פעיל', 'לא פעיל', 'לא מעוניין', 'נסגר'].map(function (s) { return '<option' + (b.status === s ? ' selected' : '') + '>' + s + '</option>'; }).join('') + '</select></div>'
+    + '<div class="field"><label for="f-takes">מה לוקח ממני / מוצרים</label><input id="f-takes" value="' + h(b.takes || '') + '" placeholder="לדוגמה: קצף קפה, שוקו"></div>'
+    + '<div class="field"><label for="f-hours">שעות פתיחה</label><input id="f-hours" value="' + h(b.hours || '') + '" placeholder="לדוגמה: א׳–ה׳ 7:00–15:00, שישי עד 13:00"></div>'
+    + '<div class="field"><label for="f-email">אימייל</label><input id="f-email" type="email" dir="ltr" value="' + h(b.email || '') + '"></div>'
+    + '<div class="field"><label for="f-web">אתר / אינסטגרם</label><input id="f-web" dir="ltr" value="' + h(b.web || '') + '"></div>'
+    + '<div class="field"><label for="f-company">שם חברה / ח.פ</label><input id="f-company" value="' + h(b.company || '') + '"></div>'
+    + '<div class="field"><label for="f-note">הערה קבועה / הכנה לביקור</label><textarea id="f-note">' + h(b.note || '') + '</textarea></div>'
+    + '<div class="sticky-save"><button type="button" class="btn primary big" id="f-save">שמירה</button></div>';
+  openSheet(id ? 'עריכת עסק' : 'עסק חדש', html);
+  var body = document.getElementById('sheet-body');
+  body.querySelector('[data-group="kind"]').addEventListener('click', function (e) {
+    var t = e.target.closest('.toggle'); if (!t) return;
+    this.querySelectorAll('.toggle').forEach(function (x) { x.setAttribute('aria-pressed', x === t); });
+  });
+  document.getElementById('f-save').addEventListener('click', function () {
+    var name = document.getElementById('f-name').value.trim();
+    if (!name) { toast('צריך שם לעסק'); return; }
+    var btn = this; btn.disabled = true; btn.textContent = 'שומר וממקם על המפה…';
+    var kindBtn = body.querySelector('[data-group="kind"] [aria-pressed="true"]');
+    api('saveBusiness', {
+      id: id || null, name: name, kind: kindBtn ? kindBtn.dataset.val : 'lead',
+      address: document.getElementById('f-address').value.trim(), phone: document.getElementById('f-phone').value.trim(),
+      contact: document.getElementById('f-contact').value.trim(), region: document.getElementById('f-region').value.trim(),
+      status: document.getElementById('f-status').value, note: document.getElementById('f-note').value.trim(),
+      takes: document.getElementById('f-takes').value.trim(), hours: document.getElementById('f-hours').value.trim(),
+      email: document.getElementById('f-email').value.trim(), web: document.getElementById('f-web').value.trim(),
+      company: document.getElementById('f-company').value.trim()
+    }).then(function (data) { load(data); if (backToCard && id) openCard(id); else closeSheet(); toast('נשמר'); })
+      .catch(function (err) { btn.disabled = false; btn.textContent = 'שמירה'; toast('לא נשמר: ' + (err.message || err)); });
+  });
+}
+
+/* ===== פעולות ===== */
+function onAction(e) {
+  var t = e.currentTarget, act = t.dataset.act;
+  if (act === 'add-plan') { addToPlan(t.dataset.id); if (map) map.closePopup(); }
+  else if (act === 'summary') { if (map) map.closePopup(); openSummary(t.dataset.id); }
+  else if (act === 'edit') { if (map) map.closePopup(); openBizForm(t.dataset.id); }
+  else if (act === 'card') { if (map) map.closePopup(); openCard(t.dataset.id); }
+  else if (act === 'summary-card') { openSummary(t.dataset.id, null, true); }
+  else if (act === 'edit-visit') { openSummary(t.dataset.id, t.dataset.v, true); }
+  else if (act === 'edit-card') { openBizForm(t.dataset.id, true); }
+  else if (act === 'close-follow-card') { t.disabled = true; api('closeFollowup', t.dataset.v).then(function (d) { load(d); openCard(t.dataset.id); toast('סומן כבוצע'); }); }
+  else if (act === 'remove') { plan.stops.splice(Number(t.dataset.i), 1); plan.km = null; renderPlan(); }
+  else if (act === 'up') { var i = Number(t.dataset.i); var x = plan.stops.splice(i, 1)[0]; plan.stops.splice(i - 1, 0, x); plan.km = null; renderPlan(); }
+  else if (act === 'close-follow') { t.disabled = true; api('closeFollowup', t.dataset.v).then(function (d) { load(d); toast('סומן כבוצע'); }); }
+}
+function bindActions(root) { root.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = onAction; }); }
+
+function show(view) {
+  document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.id !== 'view-' + view; });
+  document.querySelectorAll('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.view === view); });
+  if (view === 'map' && map) setTimeout(function () { map.invalidateSize(); }, 50);
+  if (view === 'today') renderToday();
+  if (view === 'open') renderOpen();
+}
+var fitted = false;
+function renderAll() {
+  renderMap();
+  if (!fitted) {
+    var pts = S.businesses.filter(function (b) { return b.lat != null && b.color !== 'black'; }).map(function (b) { return [b.lat, b.lng]; });
+    if (pts.length) { map.fitBounds(pts, { padding: [30, 30] }); fitted = true; }
+  }
+  setPlanDate(plan.date || todayIso());
+  renderToday();
+  renderOpen();
+}
+
+/* ===== אתחול ===== */
+document.querySelectorAll('nav.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
+document.getElementById('sheet-close').addEventListener('click', closeSheet);
+document.getElementById('sheet').addEventListener('click', function (e) { if (e.target.id === 'sheet') closeSheet(); });
+document.getElementById('btn-add').addEventListener('click', function () { openBizForm(null); });
+document.getElementById('plan-date').addEventListener('change', function () { setPlanDate(this.value); });
+document.getElementById('plan-radius').addEventListener('change', renderSuggest);
+document.getElementById('today-date').addEventListener('change', renderToday);
+document.getElementById('open-region').addEventListener('change', renderOpen);
+document.getElementById('plan-search').addEventListener('input', function () {
+  var el = document.getElementById('plan-search-results');
+  el.innerHTML = search(this.value).map(function (b) { return bizRow(b, h(sinceText(b)), '<button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'); }).join('');
+  bindActions(el);
+});
+document.getElementById('map-search').addEventListener('input', function () {
+  var el = document.getElementById('map-search-results'), res = search(this.value);
+  el.hidden = !res.length;
+  el.innerHTML = res.map(function (b) { return '<div class="row" style="padding:10px 14px;border-bottom:1px solid var(--line);cursor:pointer" data-id="' + b.id + '"><span class="dot ' + b.color + '"></span><div class="grow"><div class="name">' + h(b.name) + '</div><div class="meta">' + h(b.address || 'אין מיקום') + '</div></div></div>'; }).join('');
+  el.querySelectorAll('[data-id]').forEach(function (row) {
+    row.addEventListener('click', function () {
+      var b = byId[row.dataset.id]; el.hidden = true;
+      if (b.lat != null) { map.setView([b.lat, b.lng], 14); L.popup().setLatLng([b.lat, b.lng]).setContent(popupHtml(b)).openOn(map); }
+      else openCard(b.id);
+    });
+  });
+});
+document.getElementById('btn-optimize').addEventListener('click', function () {
+  if (plan.stops.length < 2) { toast('צריך לפחות 2 עצירות'); return; }
+  var btn = this; btn.disabled = true; btn.textContent = 'גוגל מחשב…';
+  api('optimizeRoute', plan.stops, S.settings['כתובת יציאה'] || '').then(function (r) {
+    plan.stops = r.order; plan.km = r.km; plan.minutes = r.minutes; renderPlan(); toast('הקו סודר. אל תשכח לשמור.');
+  }).catch(function (err) { toast('לא הצלחתי לסדר: ' + (err.message || err)); })
+    .then(function () { btn.disabled = false; btn.textContent = 'סדר לי את הדרך הקצרה'; });
+});
+document.getElementById('btn-save-route').addEventListener('click', function () {
+  var btn = this; btn.disabled = true;
+  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '').then(function (d) { var k = plan.km, m = plan.minutes; load(d); plan.km = k; plan.minutes = m; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); })
+    .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
+});
+
+document.getElementById('today-label').textContent = fmtDate(todayIso());
+document.getElementById('today-date').value = todayIso();
+initMap();
+api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; })
+  .catch(function (err) { document.getElementById('loading').textContent = 'לא הצלחתי לטעון: ' + (err.message || err); });
+</script>
+</body>
+</html>
