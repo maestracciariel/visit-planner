@@ -229,26 +229,33 @@ function geocode_(address) {
   try {
     var res = Maps.newGeocoder().setRegion('il').setLanguage('iw').geocode(address);
     if (res.status === 'OK' && res.results.length) {
-      var r0 = res.results[0], loc = r0.geometry.location, locality = '';
+      var r0 = res.results[0], loc = r0.geometry.location, places = [];
+      var SKIP = ['route', 'street_number', 'country', 'administrative_area_level_1', 'postal_code'];
       (r0.address_components || []).forEach(function (c) {
-        if (!locality && c.types.indexOf('locality') >= 0) locality = c.long_name;
+        if (!c.types.some(function (t) { return SKIP.indexOf(t) >= 0; })) places.push(c.long_name, c.short_name);
       });
-      return { lat: loc.lat, lng: loc.lng, locality: locality };
+      return { lat: loc.lat, lng: loc.lng, places: places };
     }
   } catch (e) {}
   return null;
 }
 
-function norm_(s) { return String(s || '').replace(/["'״׳()\-,.]/g, ' ').replace(/\s+/g, ' ').trim(); }
+function norm_(s) { return String(s || '').replace(/["'״׳`]/g, '').replace(/[()\-,.\/]/g, ' ').replace(/\s+/g, ' ').trim(); }
+/** השוואה סלחנית לכתיב: בלי ו' ו-י' (שהם/שוהם, קיסריה/קיסרייה) */
+function loose_(s) { return ' ' + norm_(s).replace(/[וי]/g, '') + ' '; }
 
-/** גוגל מצא מקום אמין רק אם היישוב שהוא מצא כתוב גם בכתובת שלנו, ובתוך ישראל */
+/**
+ * גוגל מצא מקום אמין רק אם שם היישוב שהוא מצא כתוב גם בכתובת שלנו, ובתוך ישראל.
+ * לא סומכים על שם הרחוב: "הדקל 28" קיים בהרבה ערים.
+ */
 function trusted_(address, g) {
   if (!g || g.lat < 29.4 || g.lat > 33.4 || g.lng < 34.2 || g.lng > 35.9) return false;
-  if (!g.locality) return false;
-  var a = ' ' + norm_(address) + ' ';
-  return g.locality.split(/\s*-\s*/).some(function (part) {
-    part = norm_(part);
-    return part.length > 1 && a.indexOf(' ' + part + ' ') >= 0;
+  var a = loose_(address);
+  return (g.places || []).some(function (name) {
+    return name.split(/\s*-\s*/).concat([name]).some(function (part) {
+      var p = loose_(part);
+      return p.trim().length > 1 && a.indexOf(p) >= 0;
+    });
   });
 }
 
@@ -289,7 +296,11 @@ function relocate_(all) {
     var addr = String(r[c('כתובת')] || '').trim();
     if ((!all && !wasApprox) || !addr || addr === 'כל הארץ') continue;
     var g = locate_(addr);
-    if (!g) { failed.push(r[c('שם העסק')]); continue; }
+    if (!g) {
+      failed.push(r[c('שם העסק')]);
+      if (r[c('lat')] !== '') sh.getRange(i + 1, c('מיקום משוער') + 1).setValue('כן');
+      continue;
+    }
     var oldLat = Number(r[c('lat')]), oldLng = Number(r[c('lng')]);
     var far = r[c('lat')] !== '' && (Math.abs(oldLat - g.lat) > 0.05 || Math.abs(oldLng - g.lng) > 0.05);
     if (far) moved.push(r[c('שם העסק')]);
