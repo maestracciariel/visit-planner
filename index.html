@@ -890,7 +890,8 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-document.getElementById('today-label').textContent = fmtDate(todayIso());
+var APP_VERSION = 'גרסה 2';
+document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();
 initMap();
 api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; })
