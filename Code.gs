@@ -358,7 +358,7 @@ function setupAutoUpdate() {
     if (t.getHandlerFunction() === 'autoUpdate_') ScriptApp.deleteTrigger(t);
   });
   ScriptApp.newTrigger('autoUpdate_').timeBased().everyHours(1).create();
-  var msg = updateNow_(true);
+  var msg = updateNow_(true, true);
   try { SpreadsheetApp.getUi().alert('העדכון האוטומטי פועל.\nמעכשיו האתר מתעדכן לבד פעם בשעה.\n\n' + msg); } catch (e) {}
   return msg;
 }
@@ -394,13 +394,13 @@ function scriptApi_(method, path, body) {
 }
 
 /** מחזיר הודעה קצרה בעברית על מה שקרה */
-function updateNow_(manual) {
+function updateNow_(manual, force) {
   var props = PropertiesService.getScriptProperties();
   try {
     var code = fetchText_('Code.gs');
     var m = code.match(/var CODE_VERSION = (\d+);/);
     var remote = m ? Number(m[1]) : 0;
-    if (!remote || remote <= CODE_VERSION) {
+    if (!remote || (!force && remote <= CODE_VERSION)) {
       props.setProperty('lastCheck', new Date().toISOString());
       return 'אין עדכון חדש. הגרסה שלך: ' + CODE_VERSION + '.';
     }
