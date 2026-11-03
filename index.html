@@ -276,10 +276,61 @@ h3 { font-size: 13px; margin: 26px 0 10px; color: var(--muted); font-weight: 700
 .data-search { flex: 1 1 100%; }
 .data-search input { width: 100%; height: 52px !important; padding-inline: 46px 16px !important; font-size: 16px; }
 
+#view-follow > *, #view-summary > * { max-width: 1400px; }
+/* דף לקוחות (CRM) */
+.crm-grid { display: grid; gap: 16px; }
+@media (min-width: 900px) {
+  #view-crm > * { max-width: 1400px; }
+  .crm-grid { grid-template-columns: minmax(300px, 380px) 1fr; align-items: start; }
+  .crm-profile { position: sticky; top: 0; }
+  .crm-back { display: none !important; }
+}
+@media (max-width: 899px) {
+  .crm-grid.has-profile .crm-list-pane { display: none; }
+  .crm-grid:not(.has-profile) .crm-profile { display: none; }
+}
+.crm-list { display: flex; flex-direction: column; gap: 8px; }
+.crm-item { display: flex; align-items: center; gap: 12px; width: 100%; text-align: start; border: 0; background: var(--surface); border-radius: 14px; padding: 10px 12px; box-shadow: var(--shadow-sm); color: var(--ink); }
+.crm-item[aria-current="true"] { box-shadow: var(--shadow-sm), inset 0 0 0 2px var(--accent); }
+.crm-av { width: 40px; height: 40px; border-radius: 12px; flex: none; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #fff; }
+.crm-map { height: 190px; border-radius: var(--radius); overflow: hidden; margin-bottom: 14px; box-shadow: var(--shadow-sm); }
+.kpis { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; margin-bottom: 14px; }
+.kpi { background: var(--surface); border-radius: var(--radius); padding: 12px 14px; box-shadow: var(--shadow-sm); }
+.kpi .v { font-size: 26px; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+.kpi .l { color: var(--muted); font-size: 13px; margin-top: 2px; }
+.kpi .s { color: var(--muted); font-size: 12.5px; }
+.crm-back { margin-bottom: 12px; }
+/* סיכום */
+.sum-cols { display: grid; gap: 12px; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); }
+.chart-title { font-weight: 800; margin-bottom: 10px; }
+.hbar { display: grid; grid-template-columns: minmax(90px, 30%) 1fr 36px; align-items: center; gap: 10px; padding: 5px 0; font-size: 14px; }
+.hbar .track { height: 10px; background: var(--surface-2); border-radius: 4px; overflow: hidden; }
+.hbar .fill { height: 100%; background: var(--accent); border-radius: 4px; min-width: 2px; }
+.hbar .n { text-align: end; font-variant-numeric: tabular-nums; font-weight: 700; }
+.hbar .lab { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--ink); }
+table.data.week td { min-width: 120px; white-space: normal; cursor: default; }
+table.data.week tbody tr { cursor: default; }
+table.data.week th { cursor: default; }
+table.data.week td.today, table.data.week th.today { background: var(--accent-soft); }
+.wk-stop { display: flex; align-items: center; gap: 6px; font-weight: 600; cursor: pointer; padding: 2px 0; }
+.wk-stop .ok { color: var(--c-green); font-weight: 800; }
+/* תפריט "עוד" */
+.more-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.more-tile { border: 0; background: var(--surface); border-radius: 16px; padding: 16px; text-align: start; box-shadow: var(--shadow-sm); color: var(--ink); display: flex; flex-direction: column; gap: 6px; min-height: 108px; }
+.more-tile svg { width: 26px; height: 26px; color: var(--accent); }
+.more-tile strong { font-size: 16px; }
+.more-tile span { color: var(--muted); font-size: 13px; }
+.dl-badge { display: inline-block; border-radius: 999px; padding: 2px 9px; font-size: 12.5px; font-weight: 800; }
+.dl-badge.late { background: color-mix(in srgb, var(--c-red) 18%, transparent); color: var(--c-red); }
+.dl-badge.soon { background: color-mix(in srgb, var(--c-orange) 18%, transparent); color: var(--c-orange); }
+.dl-badge.ok { background: var(--surface-2); color: var(--muted); }
+.dl-badge.done { background: color-mix(in srgb, var(--c-green) 18%, transparent); color: var(--c-green); }
+
 /* עמוד נתונים */
 #view-data > * { max-width: 1400px; }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; box-shadow: inset 0 0 0 1px var(--line); }
-.seg button { border: 0; background: none; height: 36px; padding: 0 16px; border-radius: 9px; font-weight: 700; color: var(--muted); }
+.seg { max-width: 100%; overflow-x: auto; scrollbar-width: none; }
+.seg button { white-space: nowrap; flex: none; border: 0; background: none; height: 36px; padding: 0 14px; border-radius: 9px; font-weight: 700; color: var(--muted); }
 .seg button[aria-pressed="true"] { background: var(--surface); color: var(--ink); box-shadow: var(--shadow-sm); }
 .data-tools { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; }
 .data-tools input, .data-tools select { height: 42px; border: 0; border-radius: 12px; background: var(--surface); padding: 0 12px; box-shadow: var(--shadow-sm); min-width: 0; }
@@ -421,6 +472,64 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
     <div class="toolbar"><select id="open-region" aria-label="אזור"></select></div>
     <div class="list" id="open-stale"></div>
   </section>
+  <section class="view" id="view-crm" hidden>
+    <div class="crm-grid">
+      <div class="crm-list-pane" id="crm-list-pane">
+        <h2>לקוחות <span class="meta" id="crm-count"></span></h2>
+        <div class="search-wrap data-search" style="margin-bottom:10px"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="crm-q" placeholder="חפש לקוח: שם, יישוב, טלפון, איש קשר…" autocomplete="off" aria-label="חיפוש לקוח"></div>
+        <div class="seg" role="group" aria-label="סוג" id="crm-kind">
+          <button type="button" data-k="" aria-pressed="true">הכול</button>
+          <button type="button" data-k="client" aria-pressed="false">לקוחות</button>
+          <button type="button" data-k="lead" aria-pressed="false">פוטנציאליים</button>
+          <button type="button" data-k="off" aria-pressed="false">לא פעילים</button>
+        </div>
+        <div class="crm-list" id="crm-list"></div>
+      </div>
+      <div class="crm-profile" id="crm-profile"></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-follow" hidden>
+    <h2>פעולות להמשך</h2>
+    <div class="seg" role="group" aria-label="איזה פעולות" id="follow-tab">
+      <button type="button" data-f="open" aria-pressed="true">פתוחות</button>
+      <button type="button" data-f="late" aria-pressed="false">באיחור</button>
+      <button type="button" data-f="done" aria-pressed="false">בוצעו</button>
+      <button type="button" data-f="all" aria-pressed="false">הכול</button>
+    </div>
+    <div class="data-tools"><div class="search-wrap data-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="follow-q" placeholder="חפש עסק או פעולה…" autocomplete="off" aria-label="חיפוש"></div></div>
+    <div class="count-line" id="follow-count"></div>
+    <div class="table-wrap"><table class="data" id="follow-table"></table></div>
+  </section>
+
+  <section class="view" id="view-summary" hidden>
+    <h2>סיכום</h2>
+    <div class="seg" role="group" aria-label="תצוגה" id="sum-tab">
+      <button type="button" data-t="month" aria-pressed="true">סיכום חודשי</button>
+      <button type="button" data-t="week" aria-pressed="false">תצוגה שבועית</button>
+    </div>
+    <div id="sum-month">
+      <div class="toolbar"><select id="sum-month-sel" aria-label="חודש"></select></div>
+      <div class="kpis" id="sum-kpis"></div>
+      <div class="sum-cols">
+        <div class="card"><div class="chart-title">ביקורים לפי אזור</div><div id="sum-regions"></div></div>
+        <div class="card"><div class="chart-title">מה היה בביקורים</div><div id="sum-results"></div></div>
+      </div>
+      <h3>לקוחות פעילים שעוד לא ביקרתי החודש</h3>
+      <div class="list" id="sum-missing"></div>
+    </div>
+    <div id="sum-week" hidden>
+      <div class="toolbar">
+        <button class="btn small" type="button" id="wk-prev" aria-label="שבוע קודם">→ שבוע קודם</button>
+        <strong id="wk-label"></strong>
+        <button class="btn small" type="button" id="wk-next" aria-label="שבוע הבא">שבוע הבא ←</button>
+        <button class="btn small" type="button" id="wk-today">השבוע</button>
+      </div>
+      <div class="table-wrap" style="max-height:none"><table class="data week" id="wk-table"></table></div>
+      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. לחיצה על עסק פותחת את הכרטיס.</div>
+    </div>
+  </section>
+
   <section class="view" id="view-data" hidden>
     <h2>כל העסקים</h2>
     <div class="seg" role="group" aria-label="איזו טבלה">
@@ -445,10 +554,10 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>בניית קו</button>
   <button type="button" role="tab" data-view="today" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>בדרך</button>
-  <button type="button" role="tab" data-view="open" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>מה פתוח<span class="badge" id="open-badge" hidden></span></span></button>
-  <button type="button" role="tab" data-view="data" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg>נתונים</button>
+  <button type="button" role="tab" data-view="crm" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg>לקוחות</button>
+  <button type="button" role="tab" data-view="more" aria-selected="false">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>עוד<span class="badge" id="open-badge" hidden></span></span></button>
 </nav>
 
 <div class="sheet-wrap" id="sheet" hidden>
@@ -986,6 +1095,218 @@ function renderData() {
   t.querySelectorAll('tbody tr').forEach(function (tr) { tr.onclick = function () { openCard(tr.dataset.id); }; });
 }
 
+/* ===== דף לקוחות (CRM) ===== */
+var CRM = { kind: '', id: null };
+var crmMap = null;
+function crmFilter() {
+  var q = document.getElementById('crm-q').value.trim();
+  return S.businesses.filter(function (b) {
+    if (CRM.kind === 'client' && (b.kind !== 'client' || b.color === 'black' || b.color === 'red')) return false;
+    if (CRM.kind === 'lead' && (b.kind !== 'lead' || b.color === 'black' || b.color === 'red')) return false;
+    if (CRM.kind === 'off' && b.color !== 'black' && b.color !== 'red') return false;
+    if (q && (b.name + ' ' + (b.address || '') + ' ' + (b.region || '') + ' ' + (b.phone || '') + ' ' + (b.contact || '') + ' ' + (b.company || '')).indexOf(q) < 0) return false;
+    return true;
+  }).sort(function (a, b) { return a.name.localeCompare(b.name, 'he'); });
+}
+function renderCrm() {
+  var list = crmFilter();
+  document.getElementById('crm-count').textContent = '· ' + list.length;
+  var el = document.getElementById('crm-list');
+  el.innerHTML = list.length ? list.map(function (b) {
+    return '<button type="button" class="crm-item" data-id="' + b.id + '"' + (b.id === CRM.id ? ' aria-current="true"' : '') + '>'
+      + '<span class="crm-av" style="background:' + COLORS[b.color].hex + '">' + h(initials(b.name)) + '</span>'
+      + '<span style="flex:1;min-width:0"><span class="name" style="display:block">' + h(b.name) + '</span>'
+      + '<span class="meta">' + h([b.region, b.contact, sinceText(b)].filter(Boolean).join(' · ')) + '</span></span>'
+      + '<span class="lvl-pill lvl' + b.action.lvl + '">' + ACTION_LVL[b.action.lvl] + '</span></button>';
+  }).join('') : '<div class="empty">לא נמצאו לקוחות.</div>';
+  el.querySelectorAll('.crm-item').forEach(function (it) { it.onclick = function () { showCrm(it.dataset.id); }; });
+  if (CRM.id && byId[CRM.id]) renderCrmProfile(); else if (window.innerWidth >= 900 && list.length) showCrm(list[0].id);
+}
+function showCrm(id) {
+  CRM.id = id;
+  document.querySelectorAll('#crm-list .crm-item').forEach(function (it) { it.setAttribute('aria-current', it.dataset.id === id); });
+  renderCrmProfile();
+  document.querySelector('.crm-grid').classList.add('has-profile');
+  document.getElementById('view-crm').scrollTop = 0;
+}
+function renderCrmProfile() {
+  var b = byId[CRM.id], el = document.getElementById('crm-profile');
+  if (!b) { el.innerHTML = ''; return; }
+  var real = b.visits.filter(function (v) { return ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; });
+  var first = real.length ? real[real.length - 1].date : null;
+  var kp = function (v, l, sub) { return '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>'; };
+  el.innerHTML = '<button class="btn small crm-back" type="button" id="crm-back">→ חזרה לרשימה</button>'
+    + '<div class="kpis">'
+    + kp(real.length, 'ביקורים')
+    + kp(b.lastVisit ? daysBetween(b.lastVisit, todayIso()) : '—', 'ימים מהביקור האחרון', b.lastVisit ? fmtDate(b.lastVisit) : 'אין ביקור רשום')
+    + kp(first ? fmtDate(first).replace('יום ', '') : '—', 'ביקור ראשון')
+    + kp(b.openFollow.length, 'פעולות פתוחות')
+    + kp(b.lastInterest || '—', 'התעניינות אחרונה')
+    + '</div>'
+    + (b.lat != null ? '<div class="crm-map" id="crm-map" role="img" aria-label="מיקום העסק"></div>' : '<div class="card meta" style="margin-bottom:14px">אין מיקום על המפה. לחץ "עריכת פרטים" והוסף כתובת עם עיר.</div>')
+    + cardHtml(b.id);
+  bindCard(el, b.id, renderCrmProfile);
+  var back = document.getElementById('crm-back');
+  if (back) back.onclick = function () { CRM.id = null; document.querySelector('.crm-grid').classList.remove('has-profile'); renderCrm(); };
+  if (crmMap) { crmMap.remove(); crmMap = null; }
+  if (b.lat != null) {
+    crmMap = L.map('crm-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false }).setView([b.lat, b.lng], b.approx ? 12 : 15);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/' + SKINS[currentSkin()].tiles + '/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd' }).addTo(crmMap);
+    L.circleMarker([b.lat, b.lng], { radius: 10, color: '#fff', weight: 3, fillColor: COLORS[b.color].hex, fillOpacity: 1 }).addTo(crmMap);
+  }
+}
+
+/* ===== פעולות להמשך (כמו בגיליון באקסל) ===== */
+var FOLLOW = 'open';
+function renderFollow() {
+  var t = todayIso(), q = document.getElementById('follow-q').value.trim();
+  var rows = [];
+  S.visits.forEach(function (v) {
+    var b = byId[v.businessId];
+    if (!b || !v.followup) return;
+    var days = v.followupDate ? daysBetween(t, v.followupDate) : null;
+    var late = v.followupOpen && days !== null && days < 0;
+    if (FOLLOW === 'open' && !v.followupOpen) return;
+    if (FOLLOW === 'late' && !late) return;
+    if (FOLLOW === 'done' && v.followupOpen) return;
+    if (q && (b.name + ' ' + v.followup + ' ' + (v.text || '')).indexOf(q) < 0) return;
+    rows.push({ v: v, b: b, days: days, late: late });
+  });
+  rows.sort(function (x, y) {
+    if (x.v.followupOpen !== y.v.followupOpen) return x.v.followupOpen ? -1 : 1;
+    var a = x.days === null ? 99999 : x.days, c = y.days === null ? 99999 : y.days;
+    return a - c;
+  });
+  var lateCount = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < t; }).length;
+  document.getElementById('follow-count').textContent = rows.length + ' פעולות' + (lateCount ? ' · ' + lateCount + ' באיחור' : '') + ' · לחיצה על שורה פותחת את כרטיס העסק';
+  var head = '<thead><tr><th>שם העסק</th><th>ימים לדדליין</th><th>תאריך המשך</th><th>פעולת המשך</th><th>מה נאמר בביקור</th><th>תאריך הביקור</th><th>סוג</th><th>טלפון</th><th>מצב</th></tr></thead>';
+  var body = rows.map(function (r) {
+    var badge = !r.v.followupOpen ? '<span class="dl-badge done">בוצע</span>'
+      : r.days === null ? '<span class="dl-badge ok">בלי תאריך</span>'
+      : r.days < 0 ? '<span class="dl-badge late">באיחור ' + (-r.days) + '</span>'
+      : r.days === 0 ? '<span class="dl-badge soon">היום</span>'
+      : '<span class="dl-badge ' + (r.days <= 3 ? 'soon' : 'ok') + '">עוד ' + r.days + '</span>';
+    return '<tr data-id="' + r.b.id + '"><td><span class="cell-name"><span class="dot ' + r.b.color + '"></span>' + h(r.b.name) + '</span></td>'
+      + '<td>' + badge + '</td><td>' + (r.v.followupDate ? fmtDate(r.v.followupDate).replace('יום ', '') : '') + '</td>'
+      + '<td class="wrap">' + h(r.v.followup) + '</td><td class="wrap">' + h(r.v.text || '') + '</td>'
+      + '<td>' + fmtDate(r.v.date).replace('יום ', '') + '</td><td>' + (r.b.kind === 'lead' ? 'עסק חדש' : 'לקוח קיים') + '</td>'
+      + '<td><span dir="ltr">' + h(r.b.phone || '') + '</span></td>'
+      + '<td>' + (r.v.followupOpen ? '<button class="btn small primary" data-close="' + r.v.id + '" type="button">בוצע ✓</button>' : '') + '</td></tr>';
+  }).join('');
+  var tb = document.getElementById('follow-table');
+  tb.innerHTML = head + '<tbody>' + (body || '<tr><td colspan="9" class="empty">אין פעולות כאן.</td></tr>') + '</tbody>';
+  tb.querySelectorAll('tbody tr[data-id]').forEach(function (tr) {
+    tr.onclick = function (e) {
+      var c = e.target.closest('[data-close]');
+      if (c) { e.stopPropagation(); c.disabled = true; api('closeFollowup', c.dataset.close).then(function (d) { load(d); toast('סומן כבוצע'); }); return; }
+      openCard(tr.dataset.id);
+    };
+  });
+}
+
+/* ===== סיכום חודשי ותצוגה שבועית ===== */
+var MONTHS_HE = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+var DAYS_HE = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
+var SUMTAB = 'month', WEEK0 = null;
+function monthLabel(ym) { return MONTHS_HE[Number(ym.slice(5, 7)) - 1] + ' ' + ym.slice(0, 4); }
+function hbars(pairs, total) {
+  var max = Math.max.apply(null, pairs.map(function (p) { return p[1]; }).concat([1]));
+  return pairs.length ? pairs.map(function (p) {
+    return '<div class="hbar" title="' + h(p[0]) + ': ' + p[1] + '"><span class="lab">' + h(p[0]) + '</span><span class="track"><span class="fill" style="display:block;width:' + (p[1] / max * 100) + '%"></span></span><span class="n">' + p[1] + '</span></div>';
+  }).join('') : '<div class="meta">אין נתונים בחודש הזה.</div>';
+}
+function renderSummary() {
+  document.getElementById('sum-month').hidden = SUMTAB !== 'month';
+  document.getElementById('sum-week').hidden = SUMTAB !== 'week';
+  if (SUMTAB === 'week') return renderWeek();
+  var sel = document.getElementById('sum-month-sel');
+  var months = {}; months[todayIso().slice(0, 7)] = 1;
+  S.visits.forEach(function (v) { if (v.date) months[v.date.slice(0, 7)] = 1; });
+  S.routes.forEach(function (r) { if (r.date) months[r.date.slice(0, 7)] = 1; });
+  var cur = sel.value || todayIso().slice(0, 7);
+  sel.innerHTML = Object.keys(months).sort().reverse().map(function (m) { return '<option value="' + m + '"' + (m === cur ? ' selected' : '') + '>' + monthLabel(m) + '</option>'; }).join('');
+  var ym = sel.value;
+  var inM = function (d) { return d && d.slice(0, 7) === ym; };
+  var planned = 0; S.routes.forEach(function (r) { if (inM(r.date)) planned += r.stops.length; });
+  var real = S.visits.filter(function (v) { return inM(v.date) && ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; });
+  var done = real.filter(function (v) { return v.result === 'done' || v.result === 'owner_absent'; });
+  var leadVisits = real.filter(function (v) { return byId[v.businessId] && byId[v.businessId].kind === 'lead'; });
+  var active = S.businesses.filter(function (b) { return b.kind === 'client' && b.status === 'פעיל'; });
+  var seen = {}; done.forEach(function (v) { seen[v.businessId] = 1; });
+  var activeSeen = active.filter(function (b) { return seen[b.id]; }).length;
+  var opened = S.visits.filter(function (v) { return inM(v.date) && v.followup; }).length;
+  var openNow = S.visits.filter(function (v) { return v.followupOpen; }).length;
+  var lateNow = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
+  var hot = real.filter(function (v) { return v.interest === 'חם'; }).length;
+  var kp = function (v, l, sub) { return '<div class="kpi"><div class="v">' + v + '</div><div class="l">' + l + '</div>' + (sub ? '<div class="s">' + sub + '</div>' : '') + '</div>'; };
+  document.getElementById('sum-kpis').innerHTML =
+    kp(planned, 'ביקורים מתוכננים', 'עצירות בקווים שנשמרו')
+    + kp(done.length, 'ביקורים שבוצעו', planned ? Math.round(done.length / planned * 100) + '% מהמתוכנן' : '')
+    + kp(leadVisits.length, 'ביקורים בעסקים חדשים', hot ? hot + ' חמים' : '')
+    + kp(activeSeen + ' / ' + active.length, 'לקוחות פעילים שביקרתי', active.length ? Math.round(activeSeen / active.length * 100) + '%' : '')
+    + kp(opened, 'פעולות המשך שנפתחו')
+    + kp(openNow, 'פתוחות עכשיו', lateNow ? lateNow + ' באיחור' : 'אין באיחור');
+  var reg = {}; real.forEach(function (v) { var r = (byId[v.businessId] || {}).region || 'בלי אזור'; reg[r] = (reg[r] || 0) + 1; });
+  document.getElementById('sum-regions').innerHTML = hbars(Object.keys(reg).map(function (k) { return [k, reg[k]]; }).sort(function (a, b) { return b[1] - a[1]; }));
+  var res = {}; real.forEach(function (v) { var r = RESULT[v.result] || v.result; res[r] = (res[r] || 0) + 1; });
+  document.getElementById('sum-results').innerHTML = hbars(Object.keys(res).map(function (k) { return [k, res[k]]; }).sort(function (a, b) { return b[1] - a[1]; }));
+  var missing = active.filter(function (b) { return !seen[b.id]; });
+  var showN = 12;
+  document.getElementById('sum-missing').innerHTML = (missing.length ? '<div class="count-line">' + missing.length + ' לקוחות' + (missing.length > showN ? ', מוצגים ' + showN + ' שהכי הרבה זמן לא ביקרתי' : '') + '</div>' : '')
+    + missing.sort(function (a, b) { return (a.lastVisit || '') < (b.lastVisit || '') ? -1 : 1; }).slice(0, showN).map(function (b) {
+      return bizRow(b, h(sinceText(b)), '<button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>');
+    }).join('') || '<div class="empty">ביקרת אצל כל הלקוחות הפעילים החודש.</div>';
+  bindActions(document.getElementById('sum-missing'));
+}
+function weekStart(isoDate) { var d = new Date(isoDate + 'T12:00:00'); return addDays(isoDate, -d.getDay()); }
+function renderWeek() {
+  if (!WEEK0) WEEK0 = weekStart(todayIso());
+  var days = [0, 1, 2, 3, 4, 5, 6].map(function (i) { return addDays(WEEK0, i); });
+  document.getElementById('wk-label').textContent = days[0].slice(8) + '/' + Number(days[0].slice(5, 7)) + ' – ' + days[6].slice(8) + '/' + Number(days[6].slice(5, 7));
+  var cols = days.map(function (d) {
+    var r = S.routes.filter(function (x) { return x.date === d; })[0];
+    var stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
+    var extra = S.visits.filter(function (v) { return v.date === d && v.result !== 'prep' && v.result !== 'note' && stops.indexOf(v.businessId) < 0 && byId[v.businessId]; }).map(function (v) { return v.businessId; });
+    return { d: d, stops: stops, extra: extra.filter(function (x, i, a) { return a.indexOf(x) === i; }) };
+  });
+  var rowsN = Math.max.apply(null, cols.map(function (c) { return c.stops.length; }).concat([1]));
+  var t = todayIso();
+  var cell = function (id, d) {
+    var b = byId[id];
+    var ok = b.visits.some(function (v) { return v.date === d && ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; });
+    return '<div class="wk-stop" data-id="' + id + '"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
+  };
+  var head = '<thead><tr><th>עצירה</th>' + cols.map(function (c, i) { return '<th class="' + (c.d === t ? 'today' : '') + '">' + DAYS_HE[i] + ' ' + Number(c.d.slice(8)) + '/' + Number(c.d.slice(5, 7)) + '</th>'; }).join('') + '</tr></thead>';
+  var body = '';
+  for (var i = 0; i < rowsN; i++) {
+    body += '<tr><td class="num">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td class="' + (c.d === t ? 'today' : '') + '">' + (c.stops[i] ? cell(c.stops[i], c.d) : '') + '</td>'; }).join('') + '</tr>';
+  }
+  if (cols.some(function (c) { return c.extra.length; })) {
+    body += '<tr><td class="num">מחוץ לקו</td>' + cols.map(function (c) { return '<td class="' + (c.d === t ? 'today' : '') + '">' + c.extra.map(function (id) { return cell(id, c.d); }).join('') + '</td>'; }).join('') + '</tr>';
+  }
+  body += '<tr><td class="num">בוצעו</td>' + cols.map(function (c) {
+    var n = S.visits.filter(function (v) { return v.date === c.d && (v.result === 'done' || v.result === 'owner_absent'); }).length;
+    return '<td class="num ' + (c.d === t ? 'today' : '') + '">' + (n || '') + '</td>';
+  }).join('') + '</tr>';
+  var tb = document.getElementById('wk-table');
+  tb.innerHTML = head + '<tbody>' + body + '</tbody>';
+  tb.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
+}
+
+/* ===== תפריט "עוד" ===== */
+function openMore() {
+  var late = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
+  var open = S.visits.filter(function (v) { return v.followupOpen; }).length;
+  var tile = function (view, icon, title, sub) { return '<button type="button" class="more-tile" data-go="' + view + '">' + icon + '<strong>' + title + '</strong><span>' + sub + '</span></button>'; };
+  openSheet('עוד', '<div class="more-grid">'
+    + tile('follow', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>', 'פעולות להמשך', open + ' פתוחות' + (late ? ' · ' + late + ' באיחור' : ''))
+    + tile('summary', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>', 'סיכום ושבוע', 'סיכום חודשי ותצוגה שבועית')
+    + tile('data', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg>', 'כל הנתונים', 'טבלה כמו באקסל, לפי דחיפות')
+    + tile('open', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', 'מה מחכה לי', 'לקוחות שהוזנחו לפי אזור')
+    + '</div>');
+  document.querySelectorAll('[data-go]').forEach(function (b) { b.onclick = function () { closeSheet(); show(b.dataset.go); }; });
+}
+
 /* ===== בחירת עיצוב ===== */
 var SKINS = {
   field: { name: 'א · שטח', desc: 'מפה צבעונית, כרטיסים לבנים עם צל, ירוק-טורקיז. בהשראת Badger Maps: הכול סביב המפה.', tiles: 'voyager',
@@ -1034,7 +1355,7 @@ function webHref(w) {
   if (w.charAt(0) === '@') return 'https://instagram.com/' + w.slice(1);
   return 'https://' + w;
 }
-function openCard(id) {
+function cardHtml(id) {
   var b = byId[id];
   var done = b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'prep' && v.result !== 'cancelled'; });
   var wa = waHref(b.phone);
@@ -1066,8 +1387,8 @@ function openCard(id) {
 
   html += '<h3>לפני הפגישה הבאה</h3><div class="card">'
     + (b.prep ? '<div class="note prep" style="margin-top:0"><b>' + fmtDate(b.prep.date) + ':</b> ' + h(b.prep.text) + '</div>' : '<div class="meta">עוד אין נקודות הכנה.</div>')
-    + '<div class="quick-note" style="margin-top:10px"><textarea id="prep-text" placeholder="מה להביא, מה לשאול, על מה לדבר בפגישה הבאה"></textarea>'
-    + '<button class="btn primary" id="prep-save" type="button">שמור</button></div></div>';
+    + '<div class="quick-note" style="margin-top:10px"><textarea class="prep-text" placeholder="מה להביא, מה לשאול, על מה לדבר בפגישה הבאה"></textarea>'
+    + '<button class="btn primary prep-save" type="button">שמור</button></div></div>';
 
   html += '<h3>אחרי הפגישה</h3><div class="card">'
     + (b.lastNote ? '<div class="note" style="margin-top:0"><b>' + fmtDate(b.lastNote.date) + ' · ' + h(RESULT[b.lastNote.result] || '') + ':</b> ' + h(b.lastNote.text) + '</div>' : '<div class="meta">עוד אין סיכומים.</div>')
@@ -1092,8 +1413,8 @@ function openCard(id) {
     }).join('') + '</div>';
   }
 
-  html += '<h3>הערה כללית</h3><div class="quick-note"><textarea id="qn-text" placeholder="משהו שחשוב לזכור על העסק (אפשר להכתיב במיקרופון של המקלדת)"></textarea>'
-    + '<button class="btn primary" id="qn-save" type="button">שמור</button></div>';
+  html += '<h3>הערה כללית</h3><div class="quick-note"><textarea class="qn-text" placeholder="משהו שחשוב לזכור על העסק (אפשר להכתיב במיקרופון של המקלדת)"></textarea>'
+    + '<button class="btn primary qn-save" type="button">שמור</button></div>';
 
   html += '<h3>היסטוריה</h3>';
   if (!b.visits.length) html += '<div class="empty">עוד אין ביקורים או הערות.</div>';
@@ -1108,25 +1429,30 @@ function openCard(id) {
       + '</div>';
   }).join('') + '</div>';
 
-  openSheet(b.name, html);
-  var body = document.getElementById('sheet-body');
-  bindActions(body);
-  document.getElementById('prep-save').addEventListener('click', function () {
-    var text = document.getElementById('prep-text').value.trim();
+  return html;
+}
+function bindCard(root, id, refresh) {
+  bindActions(root);
+  root.querySelector('.prep-save').addEventListener('click', function () {
+    var text = root.querySelector('.prep-text').value.trim();
     if (!text) { toast('כתוב משהו קודם'); return; }
     var btn = this; btn.disabled = true;
     api('saveVisit', { businessId: id, date: nextPlannedDate(id), result: 'prep', chips: [], text: text, followup: '', followupDate: '', interest: '' })
-      .then(function (data) { load(data); openCard(id); toast('נקודות ההכנה נשמרו'); })
+      .then(function (data) { load(data); refresh(); toast('נקודות ההכנה נשמרו'); })
       .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
   });
-  document.getElementById('qn-save').addEventListener('click', function () {
-    var text = document.getElementById('qn-text').value.trim();
+  root.querySelector('.qn-save').addEventListener('click', function () {
+    var text = root.querySelector('.qn-text').value.trim();
     if (!text) { toast('כתוב משהו קודם'); return; }
     var btn = this; btn.disabled = true;
     api('saveVisit', { businessId: id, date: todayIso(), result: 'note', chips: [], text: text, followup: '', followupDate: '', interest: '' })
-      .then(function (data) { load(data); openCard(id); toast('ההערה נשמרה'); })
+      .then(function (data) { load(data); refresh(); toast('ההערה נשמרה'); })
       .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
   });
+}
+function openCard(id) {
+  openSheet(byId[id].name, cardHtml(id));
+  bindCard(document.getElementById('sheet-body'), id, function () { openCard(id); });
 }
 
 /* ===== הוספה ועריכה של עסק ===== */
@@ -1196,9 +1522,16 @@ function onAction(e) {
 }
 function bindActions(root) { root.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = onAction; }); }
 
+var CURRENT_VIEW = 'map';
 function show(view) {
+  if (view === 'more') { openMore(); return; }
+  CURRENT_VIEW = view;
+  var navView = ['follow', 'summary', 'data', 'open'].indexOf(view) >= 0 ? 'more' : view;
   document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.id !== 'view-' + view; });
-  document.querySelectorAll('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.view === view); });
+  document.querySelectorAll('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.view === navView); });
+  if (view === 'crm') renderCrm();
+  if (view === 'follow') renderFollow();
+  if (view === 'summary') renderSummary();
   if (view === 'map' && map) setTimeout(function () { map.invalidateSize(); }, 50);
   if (view === 'today') renderToday();
   if (view === 'open') renderOpen();
@@ -1215,12 +1548,27 @@ function renderAll() {
   renderToday();
   renderOpen();
   if (!document.getElementById('view-data').hidden) { renderDataFilters(); renderData(); }
+  if (CURRENT_VIEW === 'crm') renderCrm();
+  if (CURRENT_VIEW === 'follow') renderFollow();
+  if (CURRENT_VIEW === 'summary') renderSummary();
 }
 
 /* ===== אתחול ===== */
 document.querySelectorAll('nav.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
 document.getElementById('sheet-close').addEventListener('click', closeSheet);
 document.getElementById('btn-skin').addEventListener('click', openSkins);
+document.getElementById('crm-q').addEventListener('input', function () { CRM.id = window.innerWidth >= 900 ? CRM.id : null; document.querySelector('.crm-grid').classList.remove('has-profile'); renderCrm(); });
+document.querySelectorAll('#crm-kind button').forEach(function (b) { b.addEventListener('click', function () {
+  CRM.kind = b.dataset.k; document.querySelectorAll('#crm-kind button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); renderCrm(); }); });
+document.getElementById('follow-q').addEventListener('input', renderFollow);
+document.querySelectorAll('#follow-tab button').forEach(function (b) { b.addEventListener('click', function () {
+  FOLLOW = b.dataset.f; document.querySelectorAll('#follow-tab button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); renderFollow(); }); });
+document.querySelectorAll('#sum-tab button').forEach(function (b) { b.addEventListener('click', function () {
+  SUMTAB = b.dataset.t; document.querySelectorAll('#sum-tab button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); renderSummary(); }); });
+document.getElementById('sum-month-sel').addEventListener('change', renderSummary);
+document.getElementById('wk-prev').addEventListener('click', function () { WEEK0 = addDays(WEEK0, -7); renderWeek(); });
+document.getElementById('wk-next').addEventListener('click', function () { WEEK0 = addDays(WEEK0, 7); renderWeek(); });
+document.getElementById('wk-today').addEventListener('click', function () { WEEK0 = weekStart(todayIso()); renderWeek(); });
 document.getElementById('data-q').addEventListener('input', renderData);
 document.getElementById('data-region').addEventListener('change', renderData);
 document.getElementById('data-color').addEventListener('change', renderData);
@@ -1269,12 +1617,18 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 5';
+var APP_VERSION = 'גרסה 6';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 6': [
+    ['לקוחות (בסרגל התחתון)', 'דף CRM: רשימת כל הלקוחות עם חיפוש. לחיצה על לקוח מציגה את כל המידע עליו: מפה קטנה, מספרים, פרטים, הכנה, סיכומים והיסטוריה.'],
+    ['פעולות להמשך (בתפריט "עוד")', 'הטבלה מהאקסל: כל פעולה עם ימים לדדליין, מה נאמר ומה הובטח. באיחור באדום, וכפתור "בוצע".'],
+    ['סיכום ושבוע (בתפריט "עוד")', 'סיכום חודשי עם מספרים וגרפים, ותצוגה שבועית של כל הקווים: עמודה לכל יום ו-✓ על ביקורים שבוצעו.'],
+    ['פעולה מומלצת ולפני/אחרי פגישה', 'בכל כרטיס עסק ובחלון של נקודה במפה.']
+  ],
   'גרסה 5': [
     ['פעולה מומלצת לכל עסק', 'בכרטיס העסק ובחלון שנפתח כשלוחצים על נקודה במפה: מה כדאי לעשות ועד כמה זה דחוף, עם כפתורי החלטה.'],
     ['לפני ואחרי פגישה', 'בכרטיס העסק: "לפני הפגישה הבאה" (מה להביא ולשאול) ו"אחרי הפגישה". נקודות ההכנה מופיעות גם במסך "בדרך".'],
