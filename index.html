@@ -1317,7 +1317,15 @@ var SKINS = {
     prev: 'background:#0d141b', bar: '#121a23', top: '#121a23', acc: '#3ee6a8' }
 };
 var tiles;
-function currentSkin() { var k = 'night'; try { k = localStorage.getItem('vp-skin') || 'night'; } catch (e) {} return SKINS[k] ? k : 'night'; }
+function currentSkin() {
+  var k = 'night';
+  try {
+    // בחרת בעיצוב SPOTIO (לילה): מעבירים אליו פעם אחת גם מכשירים ששמרו בחירה ישנה
+    if (localStorage.getItem('vp-skin-reset') !== '1') { localStorage.setItem('vp-skin', 'night'); localStorage.setItem('vp-skin-reset', '1'); }
+    k = localStorage.getItem('vp-skin') || 'night';
+  } catch (e) {}
+  return SKINS[k] ? k : 'night';
+}
 function applySkin(k) {
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('vp-skin', k); } catch (e) {}
@@ -1617,12 +1625,18 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 6';
+var APP_VERSION = 'גרסה 6.1';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 6.1': [
+    ['עיצוב לילה (SPOTIO)', 'האתר עבר לעיצוב הכהה שבחרת. אפשר להחליף בכל רגע בכפתור הפלטה ליד "+ עסק".'],
+    ['לקוחות (בסרגל התחתון)', 'דף CRM: רשימת כל הלקוחות עם חיפוש. לחיצה על לקוח מציגה את כל המידע עליו.'],
+    ['פעולות להמשך (בתפריט "עוד")', 'הטבלה מהאקסל: ימים לדדליין, מה נאמר ומה הובטח, וכפתור "בוצע".'],
+    ['סיכום ושבוע (בתפריט "עוד")', 'סיכום חודשי ותצוגה שבועית של כל הקווים.']
+  ],
   'גרסה 6': [
     ['לקוחות (בסרגל התחתון)', 'דף CRM: רשימת כל הלקוחות עם חיפוש. לחיצה על לקוח מציגה את כל המידע עליו: מפה קטנה, מספרים, פרטים, הכנה, סיכומים והיסטוריה.'],
     ['פעולות להמשך (בתפריט "עוד")', 'הטבלה מהאקסל: כל פעולה עם ימים לדדליין, מה נאמר ומה הובטח. באיחור באדום, וכפתור "בוצע".'],
