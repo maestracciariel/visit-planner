@@ -47,6 +47,7 @@
 }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; margin: 0; }
+@supports (height: 100dvh) { body { height: 100dvh; } }
 body {
   background: var(--bg); color: var(--ink); font-family: var(--font-body); font-size: 16px; line-height: 1.45;
   display: flex; flex-direction: column; overflow: hidden;
@@ -407,6 +408,7 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
 <header class="top">
   <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
   <div class="brand"><h1>מתכנן ביקורים</h1><div class="sub" id="today-label"></div></div>
+  <button class="icon-btn" id="btn-menu" type="button" aria-label="כל הדפים" title="כל הדפים"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
   <button class="icon-btn" id="btn-skin" type="button" aria-label="בחירת עיצוב" title="עיצוב"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A4.6 4.6 0 0 0 21 9.8C21 6 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></button>
   <button class="icon-btn primary" id="btn-add" type="button" aria-label="הוספת עסק">+ עסק</button>
 </header>
@@ -1298,7 +1300,11 @@ function openMore() {
   var late = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
   var open = S.visits.filter(function (v) { return v.followupOpen; }).length;
   var tile = function (view, icon, title, sub) { return '<button type="button" class="more-tile" data-go="' + view + '">' + icon + '<strong>' + title + '</strong><span>' + sub + '</span></button>'; };
-  openSheet('עוד', '<div class="more-grid">'
+  openSheet('כל הדפים', '<div class="more-grid">'
+    + tile('map', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>', 'מפה', 'כל העסקים בצבעים')
+    + tile('crm', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>', 'לקוחות', 'כל המידע על כל לקוח')
+    + tile('plan', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>', 'בניית קו', 'תכנון יום עבודה')
+    + tile('today', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>', 'בדרך', 'הקו של היום')
     + tile('follow', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>', 'פעולות להמשך', open + ' פתוחות' + (late ? ' · ' + late + ' באיחור' : ''))
     + tile('summary', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>', 'סיכום ושבוע', 'סיכום חודשי ותצוגה שבועית')
     + tile('data', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg>', 'כל הנתונים', 'טבלה כמו באקסל, לפי דחיפות')
@@ -1565,6 +1571,7 @@ function renderAll() {
 document.querySelectorAll('nav.tabs button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
 document.getElementById('sheet-close').addEventListener('click', closeSheet);
 document.getElementById('btn-skin').addEventListener('click', openSkins);
+document.getElementById('btn-menu').addEventListener('click', openMore);
 document.getElementById('crm-q').addEventListener('input', function () { CRM.id = window.innerWidth >= 900 ? CRM.id : null; document.querySelector('.crm-grid').classList.remove('has-profile'); renderCrm(); });
 document.querySelectorAll('#crm-kind button').forEach(function (b) { b.addEventListener('click', function () {
   CRM.kind = b.dataset.k; document.querySelectorAll('#crm-kind button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); renderCrm(); }); });
@@ -1625,13 +1632,14 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 6.1';
+var APP_VERSION = 'גרסה 6.2';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
-  'גרסה 6.1': [
+  'גרסה 6.2': [
+    ['כל הדפים מכל מקום', 'כפתור ☰ בראש האתר פותח את כל הדפים: מפה, לקוחות, בניית קו, בדרך, פעולות להמשך, סיכום ושבוע, כל הנתונים.'],
     ['עיצוב לילה (SPOTIO)', 'האתר עבר לעיצוב הכהה שבחרת. אפשר להחליף בכל רגע בכפתור הפלטה ליד "+ עסק".'],
     ['לקוחות (בסרגל התחתון)', 'דף CRM: רשימת כל הלקוחות עם חיפוש. לחיצה על לקוח מציגה את כל המידע עליו.'],
     ['פעולות להמשך (בתפריט "עוד")', 'הטבלה מהאקסל: ימים לדדליין, מה נאמר ומה הובטח, וכפתור "בוצע".'],
