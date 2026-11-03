@@ -622,7 +622,8 @@ function popupHtml(b) {
   if (b.address) html += '<div class="meta">' + h(b.address) + (b.approx ? ' <i>(מיקום משוער)</i>' : '') + '</div>';
   if (b.phone) html += '<div class="meta" dir="ltr" style="text-align:right">' + h(b.phone) + (b.contact ? ' · ' + h(b.contact) : '') + '</div>';
   if (b.lastNote) html += '<div class="note"><b>' + fmtDate(b.lastNote.date) + ':</b> ' + h(b.lastNote.text) + '</div>';
-  if (b.openFollow.length) html += '<div class="note followup"><b>פתוח:</b> ' + h(b.openFollow[0].followup) + '</div>';
+  html += '<div class="note"><span class="lvl-pill lvl' + b.action.lvl + '">' + ACTION_LVL[b.action.lvl] + '</span> ' + h(b.action.text) + '</div>';
+  if (b.prep) html += '<div class="note prep"><b>הכנה:</b> ' + h(b.prep.text) + '</div>';
   html += '<div class="pop-actions">'
     + '<button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'
     + '<button class="btn small" data-act="summary" data-id="' + b.id + '">סיכום ביקור</button>'
@@ -1268,12 +1269,30 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 4';
+var APP_VERSION = 'גרסה 5';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();
 initMap();
-api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; })
+var WHATS_NEW = {
+  'גרסה 5': [
+    ['פעולה מומלצת לכל עסק', 'בכרטיס העסק ובחלון שנפתח כשלוחצים על נקודה במפה: מה כדאי לעשות ועד כמה זה דחוף, עם כפתורי החלטה.'],
+    ['לפני ואחרי פגישה', 'בכרטיס העסק: "לפני הפגישה הבאה" (מה להביא ולשאול) ו"אחרי הפגישה". נקודות ההכנה מופיעות גם במסך "בדרך".'],
+    ['כל העסקים במקום אחד', 'לשונית "נתונים": חיפוש גדול למעלה, רשימה ממוינת לפי דחיפות, ועמודות של הכנה, סיכום והתעניינות.'],
+    ['עיצוב לילה', 'אפשר להחליף עיצוב בכל רגע בכפתור הפלטה ליד "+ עסק".']
+  ]
+};
+function showWhatsNew() {
+  var seen = ''; try { seen = localStorage.getItem('vp-seen') || ''; } catch (e) {}
+  var items = WHATS_NEW[APP_VERSION];
+  if (!items || seen === APP_VERSION) return;
+  try { localStorage.setItem('vp-seen', APP_VERSION); } catch (e) {}
+  openSheet('מה חדש · ' + APP_VERSION, '<div class="list">' + items.map(function (it) {
+    return '<div class="card"><div class="name" style="white-space:normal">' + h(it[0]) + '</div><div class="meta" style="margin-top:4px">' + h(it[1]) + '</div></div>';
+  }).join('') + '</div><div class="sticky-save"><button type="button" class="btn primary big" id="wn-ok">הבנתי</button></div>');
+  document.getElementById('wn-ok').addEventListener('click', closeSheet);
+}
+api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; showWhatsNew(); })
   .catch(function (err) { document.getElementById('loading').textContent = 'לא הצלחתי לטעון: ' + (err.message || err); });
 </script>
 </body>
