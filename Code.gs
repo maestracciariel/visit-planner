@@ -27,12 +27,16 @@ function resultCode_(he) { for (var k in RESULT_HE) if (RESULT_HE[k] === he) ret
 var SCREENS_URL = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/index.html';
 
 function loadScreens_() {
+  var why = '';
   try {
     var res = UrlFetchApp.fetch(SCREENS_URL + '?t=' + Date.now(), { muteHttpExceptions: true });
     var html = res.getContentText('UTF-8');
     if (res.getResponseCode() === 200 && html.indexOf('google.script.run') > 0) return HtmlService.createHtmlOutput(html);
-  } catch (e) {}
-  return HtmlService.createHtmlOutputFromFile('index');
+    why = 'GitHub ענה ' + res.getResponseCode();
+  } catch (e) { why = e.message; }
+  // עותק הגיבוי: מסמנים אותו, כדי שיופיע בכותרת שהאתר לא הצליח להגיע ל-GitHub ולמה
+  return HtmlService.createHtmlOutputFromFile('index')
+    .append('<script>window.VP_LOCAL = ' + JSON.stringify(why || 'לא ידוע') + ';</script>');
 }
 
 function doGet() {

@@ -1635,6 +1635,9 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
 var APP_VERSION = 'גרסה 6.2';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
+setTimeout(function () {
+  if (window.VP_LOCAL) document.getElementById('today-label').textContent += ' · עותק מקומי (' + String(window.VP_LOCAL).slice(0, 60) + ')';
+}, 0);
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
