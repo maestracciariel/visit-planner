@@ -261,6 +261,21 @@ h3 { font-size: 13px; margin: 26px 0 10px; color: var(--muted); font-weight: 700
 .qa svg { width: 22px; height: 22px; color: var(--accent); }
 .qa[aria-disabled="true"] { opacity: .35; pointer-events: none; }
 
+/* פעולה מומלצת */
+.action-box { background: var(--surface); border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow-sm), inset -4px 0 0 var(--muted); margin-top: 14px; }
+.action-box.lvl0 { box-shadow: var(--shadow-sm), inset -4px 0 0 var(--c-red); }
+.action-box.lvl1 { box-shadow: var(--shadow-sm), inset -4px 0 0 var(--c-orange); }
+.action-box.lvl2 { box-shadow: var(--shadow-sm), inset -4px 0 0 var(--c-blue); }
+.ab-k { font-size: 12.5px; font-weight: 800; color: var(--muted); letter-spacing: .03em; }
+.ab-t { font-size: 17px; font-weight: 700; margin-top: 2px; }
+.note.prep { box-shadow: inset -3px 0 0 var(--c-blue); }
+.lvl-pill { display: inline-block; border-radius: 999px; padding: 2px 10px; font-size: 12.5px; font-weight: 800; background: var(--surface-2); color: var(--muted); }
+.lvl-pill.lvl0 { background: color-mix(in srgb, var(--c-red) 18%, transparent); color: var(--c-red); }
+.lvl-pill.lvl1 { background: color-mix(in srgb, var(--c-orange) 18%, transparent); color: var(--c-orange); }
+.lvl-pill.lvl2 { background: color-mix(in srgb, var(--c-blue) 18%, transparent); color: var(--c-blue); }
+.data-search { flex: 1 1 100%; }
+.data-search input { width: 100%; height: 52px !important; padding-inline: 46px 16px !important; font-size: 16px; }
+
 /* עמוד נתונים */
 #view-data > * { max-width: 1400px; }
 .seg { display: inline-flex; background: var(--surface-2); border-radius: 12px; padding: 4px; gap: 4px; margin-bottom: 14px; box-shadow: inset 0 0 0 1px var(--line); }
@@ -407,15 +422,16 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
     <div class="list" id="open-stale"></div>
   </section>
   <section class="view" id="view-data" hidden>
-    <h2>כל הנתונים</h2>
+    <h2>כל העסקים</h2>
     <div class="seg" role="group" aria-label="איזו טבלה">
       <button type="button" data-dtab="biz" aria-pressed="true">עסקים</button>
       <button type="button" data-dtab="visits" aria-pressed="false">ביקורים והערות</button>
     </div>
     <div class="data-tools">
-      <input type="search" id="data-q" placeholder="חיפוש בכל העמודות" autocomplete="off" aria-label="חיפוש בטבלה">
+      <div class="search-wrap data-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="data-q" placeholder="חפש עסק: שם, יישוב, טלפון, איש קשר…" autocomplete="off" aria-label="חיפוש עסק"></div>
       <select id="data-region" aria-label="אזור"></select>
       <select id="data-color" aria-label="מצב"></select>
+      <select id="data-action" aria-label="דחיפות"><option value="">כל רמות הדחיפות</option><option value="0">עכשיו</option><option value="1">בקרוב</option><option value="2">מתוכנן</option><option value="3">אין צורך</option></select>
     </div>
     <div class="count-line" id="data-count"></div>
     <div class="table-wrap"><table class="data" id="data-table"></table></div>
@@ -466,7 +482,7 @@ var COLORS = {
   black: { label: 'נסגר / לא פעיל', css: 'var(--c-black)', hex: '#1f2937' }
 };
 var shown = { green: true, yellow: true, orange: true, blue: true, red: true, black: false };
-var RESULT = { note: 'הערה', done: 'ביקרתי', closed_door: 'היה סגור', owner_absent: 'הבעלים לא היה', phone: 'שיחת טלפון', cancelled: 'בוטל' };
+var RESULT = { prep: 'הכנה לפגישה', note: 'הערה', done: 'ביקרתי', closed_door: 'היה סגור', owner_absent: 'הבעלים לא היה', phone: 'שיחת טלפון', cancelled: 'בוטל' };
 
 function h(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
 function iso(d) { var z = new Date(d.getTime() - d.getTimezoneOffset() * 60000); return z.toISOString().slice(0, 10); }
@@ -490,9 +506,12 @@ function load(data) {
   S.businesses.forEach(function (b) {
     var done = b.visits.filter(function (v) { return v.result === 'done' || v.result === 'owner_absent'; });
     b.lastVisit = done.length ? done[0].date : null;
-    b.lastNote = b.visits.filter(function (v) { return v.text; })[0] || null;
+    b.lastNote = b.visits.filter(function (v) { return v.text && v.result !== 'prep'; })[0] || null;
+    b.prep = b.visits.filter(function (v) { return v.result === 'prep' && v.text; })[0] || null;
+    b.lastInterest = (b.visits.filter(function (v) { return v.interest; })[0] || {}).interest || '';
     b.openFollow = b.visits.filter(function (v) { return v.followupOpen; });
     b.color = colorOf(b);
+    b.action = recommend(b);
   });
   renderAll();
 }
@@ -509,6 +528,47 @@ function colorOf(b) {
   if (d <= orangeDays) return 'yellow';
   return 'orange';
 }
+/* פעולה מומלצת לכל עסק: 0 עכשיו, 1 בקרוב, 2 מתוכנן, 3 אין צורך */
+var ACTION_LVL = ['עכשיו', 'בקרוב', 'מתוכנן', 'אין צורך'];
+function recommend(b) {
+  var t = todayIso();
+  var due = b.openFollow.filter(function (v) { return v.followupDate && v.followupDate <= t; });
+  if (due.length) return { lvl: 0, text: 'לבצע: ' + due[0].followup };
+  if (b.color === 'black') return { lvl: 3, text: 'אין צורך (נסגר / לא פעיל)' };
+  if (b.color === 'red') {
+    var lastAny = b.visits.filter(function (v) { return v.result !== 'prep'; })[0];
+    if (lastAny && daysBetween(lastAny.date, t) > 180) return { lvl: 2, text: 'לא מעוניין לפני חצי שנה, לנסות שוב?' };
+    return { lvl: 3, text: 'לא מעוניין כרגע' };
+  }
+  if (b.openFollow.length) {
+    var f = b.openFollow[0];
+    return { lvl: f.followupDate ? 2 : 1, text: (f.followupDate ? 'מתוכנן ל-' + fmtDate(f.followupDate).replace('יום ', '') + ': ' : 'פתוח: ') + f.followup };
+  }
+  if (b.kind === 'lead') {
+    var lastV = b.visits.filter(function (v) { return ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; })[0];
+    if (!lastV) return { lvl: 1, text: 'לבקר ולהציג את המוצר' };
+    if (lastV.result === 'closed_door') return { lvl: 1, text: 'היה סגור, לבדוק שעות ולנסות שוב' };
+    if (lastV.result === 'owner_absent') return { lvl: 1, text: 'לחזור כשהבעלים במקום' };
+    if (b.lastInterest === 'חם') return { lvl: 0, text: 'מתעניין, לסגור עסקה או לשלוח הצעת מחיר' };
+    if (b.lastInterest === 'קר') return { lvl: 2, text: 'לא התלהב, להחליט: להמשיך או "לא מעוניין"' };
+    return { lvl: 1, text: 'להחליט על הצעד הבא אחרי הביקור' };
+  }
+  if (b.color === 'orange') return { lvl: 1, text: b.lastVisit ? 'ביקור דופק, עברו ' + daysBetween(b.lastVisit, t) + ' ימים' : 'ביקור דופק, אין ביקור רשום' };
+  if (b.color === 'yellow') return { lvl: 2, text: 'לתכנן ביקור החודש' };
+  return { lvl: 3, text: 'אין צורך כרגע' };
+}
+function setStatus(id, status) {
+  var b = byId[id];
+  return api('saveBusiness', { id: b.id, name: b.name, kind: b.kind, address: b.address || '', phone: b.phone || '', contact: b.contact || '',
+    region: b.region || '', status: status, note: b.note || '', takes: b.takes || '', hours: b.hours || '', email: b.email || '',
+    web: b.web || '', company: b.company || '' });
+}
+function nextPlannedDate(id) {
+  var t = todayIso();
+  var r = S.routes.filter(function (x) { return x.date >= t && x.stops.indexOf(id) >= 0; }).sort(function (a, b) { return a.date < b.date ? -1 : 1; })[0];
+  return r ? r.date : t;
+}
+
 function sinceText(b) {
   if (b.kind === 'lead' && !b.lastVisit) return 'עוד לא ביקרתי';
   if (!b.lastVisit) return 'אין ביקור רשום';
@@ -697,7 +757,8 @@ function renderToday() {
     var html = '<div class="card"><div class="row"><span class="stop-n" style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + '</div></div>'
       + (todayV ? '<span class="done-mark">✓ ' + h(RESULT[todayV.result] || '') + '</span>' : '') + '</div>';
     if (b.phone) html += '<div class="meta" style="margin-top:6px">טלפון: <a href="' + telHref(b.phone) + '" dir="ltr">' + h(b.phone) + '</a>' + (b.contact ? ' · ' + h(b.contact) : '') + '</div>';
-    if (b.note) html += '<div class="note"><b>הכנה:</b> ' + h(b.note) + '</div>';
+    if (b.prep) html += '<div class="note prep"><b>הכנה לפגישה:</b> ' + h(b.prep.text) + '</div>';
+    if (b.note) html += '<div class="note"><b>חשוב לזכור:</b> ' + h(b.note) + '</div>';
     if (b.lastNote && (!todayV || b.lastNote.id !== todayV.id)) html += '<div class="note"><b>בפעם הקודמת (' + fmtDate(b.lastNote.date) + '):</b> ' + h(b.lastNote.text) + '</div>';
     if (b.openFollow.length) html += '<div class="note followup"><b>הבטחתי:</b> ' + h(b.openFollow[0].followup) + '</div>';
     if (todayV && todayV.text) html += '<div class="note"><b>היום:</b> ' + h(todayV.text) + '</div>';
@@ -838,20 +899,21 @@ function fallbackCopy(text) {
 }
 
 /* ===== עמוד נתונים ===== */
-var DT = { tab: 'biz', sort: 'name', dir: 1 };
+var DT = { tab: 'biz', sort: 'lvl', dir: 1 };
 function bizRowData(b) {
   var days = b.lastVisit ? daysBetween(b.lastVisit, todayIso()) : null;
   return {
     b: b, name: b.name, color: b.color, status: STATUS_TEXT[b.color], kind: b.kind === 'lead' ? 'עסק חדש' : 'לקוח קיים', region: b.region || '',
     contact: b.contact || '', phone: b.phone || '', address: b.address || '', last: b.lastVisit || '', days: days,
-    count: b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'cancelled'; }).length,
-    open: b.openFollow.length, note: b.lastNote ? b.lastNote.text : '', takes: b.takes || '', hours: b.hours || ''
+    count: b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'prep' && v.result !== 'cancelled'; }).length,
+    open: b.openFollow.length, note: b.lastNote ? b.lastNote.text : '', takes: b.takes || '', hours: b.hours || '',
+    action: b.action.text, lvl: b.action.lvl, prep: b.prep ? b.prep.text : '', important: b.note || '', interest: b.lastInterest
   };
 }
 var BIZ_COLS_UI = [
-  ['name', 'שם העסק'], ['status', 'מצב'], ['kind', 'סוג'], ['region', 'אזור'], ['contact', 'איש קשר'], ['phone', 'טלפון'],
+  ['name', 'שם העסק'], ['lvl', 'דחיפות'], ['action', 'פעולה מומלצת'], ['status', 'מצב'], ['kind', 'סוג'], ['region', 'אזור'], ['contact', 'איש קשר'], ['phone', 'טלפון'],
   ['address', 'כתובת'], ['last', 'ביקור אחרון'], ['days', 'ימים מאז'], ['count', 'ביקורים'], ['open', 'המשכים פתוחים'],
-  ['note', 'מה נאמר לאחרונה'], ['takes', 'מה לוקח'], ['hours', 'שעות פתיחה']
+  ['note', 'אחרי הפגישה האחרונה'], ['prep', 'הכנה לפגישה הבאה'], ['important', 'חשוב לזכור'], ['interest', 'התעניינות'], ['takes', 'מה לוקח'], ['hours', 'שעות פתיחה']
 ];
 var VISIT_COLS_UI = [
   ['bizName', 'שם העסק'], ['date', 'תאריך'], ['result', 'מה היה'], ['chips', 'פרטים'], ['text', 'מה נאמר'],
@@ -884,11 +946,13 @@ function renderData() {
   rows = rows.filter(function (r) {
     if (region && r.region !== region) return false;
     if (color && r.color !== color) return false;
+    var act = document.getElementById('data-action').value;
+    if (act !== '' && DT.tab === 'biz' && String(r.lvl) !== act) return false;
     if (q) { var all = cols.map(function (c) { return r[c[0]]; }).join(' '); if (all.indexOf(q) < 0) return false; }
     return true;
   });
   var key = DT.sort;
-  if (!cols.some(function (c) { return c[0] === key; })) { key = DT.tab === 'biz' ? 'name' : 'date'; DT.sort = key; DT.dir = DT.tab === 'biz' ? 1 : -1; }
+  if (!cols.some(function (c) { return c[0] === key; })) { key = DT.tab === 'biz' ? 'lvl' : 'date'; DT.sort = key; DT.dir = DT.tab === 'biz' ? 1 : -1; }
   rows.sort(function (a, b) {
     var x = a[key], y = b[key];
     if (x === null || x === '') return 1; if (y === null || y === '') return -1;
@@ -898,7 +962,7 @@ function renderData() {
   var head = '<thead><tr>' + cols.map(function (c) {
     return '<th data-sort="' + c[0] + '"' + (c[0] === key ? ' aria-sort="' + (DT.dir > 0 ? 'ascending' : 'descending') + '"' : '') + '>' + c[1] + '</th>';
   }).join('') + '</tr></thead>';
-  var WRAP = { note: 1, text: 1, followup: 1, address: 1 }, NUM = { days: 1, count: 1, open: 1 }, DATE = { last: 1, date: 1, followupDate: 1 };
+  var WRAP = { note: 1, text: 1, followup: 1, address: 1, action: 1, prep: 1, important: 1 }, NUM = { days: 1, count: 1, open: 1 }, DATE = { last: 1, date: 1, followupDate: 1 };
   var body = '<tbody>' + rows.map(function (r) {
     return '<tr data-id="' + r.b.id + '">' + cols.map(function (c, i) {
       var v = r[c[0]], cls = WRAP[c[0]] ? ' class="wrap"' : NUM[c[0]] ? ' class="num"' : '';
@@ -908,6 +972,7 @@ function renderData() {
       else if (c[0] === 'phone') out = '<span dir="ltr">' + h(v) + '</span>';
       else if (c[0] === 'days') out = v === null ? '—' : '<span' + (v > 60 ? ' class="late"' : '') + '>' + v + '</span>';
       else if (c[0] === 'open') out = v ? '<span class="late">' + v + '</span>' : '';
+      else if (c[0] === 'lvl') out = '<span class="lvl-pill lvl' + v + '">' + ACTION_LVL[v] + '</span>';
       else out = h(v);
       return '<td' + cls + '>' + out + '</td>';
     }).join('') + '</tr>';
@@ -930,7 +995,7 @@ var SKINS = {
     prev: 'background:#0d141b', bar: '#121a23', top: '#121a23', acc: '#3ee6a8' }
 };
 var tiles;
-function currentSkin() { var k = 'field'; try { k = localStorage.getItem('vp-skin') || 'field'; } catch (e) {} return SKINS[k] ? k : 'field'; }
+function currentSkin() { var k = 'night'; try { k = localStorage.getItem('vp-skin') || 'night'; } catch (e) {} return SKINS[k] ? k : 'night'; }
 function applySkin(k) {
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('vp-skin', k); } catch (e) {}
@@ -970,7 +1035,7 @@ function webHref(w) {
 }
 function openCard(id) {
   var b = byId[id];
-  var done = b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'cancelled'; });
+  var done = b.visits.filter(function (v) { return v.result !== 'note' && v.result !== 'prep' && v.result !== 'cancelled'; });
   var wa = waHref(b.phone);
   var html = '<div class="bizcard" style="--card-c:' + COLORS[b.color].hex + '"><div class="top-row"><div class="avatar">' + h(initials(b.name)) + '</div>'
     + '<div style="min-width:0"><div class="bc-name">' + h(b.name) + '</div><div class="bc-sub">' + (b.contact ? h(b.contact) + ' · ' : '') + (b.kind === 'lead' ? 'עסק פוטנציאלי' : 'לקוח קיים') + '</div></div></div>'
@@ -991,12 +1056,28 @@ function openCard(id) {
     + '<button class="btn" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'
     + '<button class="btn" data-act="edit-card" data-id="' + b.id + '">עריכת פרטים</button></div>';
 
+  html += '<div class="action-box lvl' + b.action.lvl + '"><div class="ab-k">פעולה מומלצת · ' + ACTION_LVL[b.action.lvl] + '</div><div class="ab-t">' + h(b.action.text) + '</div>'
+    + '<div class="btns"><button class="btn small primary" data-act="add-plan" data-id="' + b.id + '">+ לקו</button>'
+    + '<button class="btn small" data-act="summary-card" data-id="' + b.id + '">קבע פעולת המשך</button>'
+    + (b.status !== 'לא מעוניין' ? '<button class="btn small" data-act="set-status" data-status="לא מעוניין" data-id="' + b.id + '">לא מעוניין</button>' : '<button class="btn small" data-act="set-status" data-status="פעיל" data-id="' + b.id + '">להחזיר לפעיל</button>')
+    + (b.status !== 'נסגר' ? '<button class="btn small" data-act="set-status" data-status="נסגר" data-id="' + b.id + '">נסגר</button>' : '')
+    + '</div></div>';
+
+  html += '<h3>לפני הפגישה הבאה</h3><div class="card">'
+    + (b.prep ? '<div class="note prep" style="margin-top:0"><b>' + fmtDate(b.prep.date) + ':</b> ' + h(b.prep.text) + '</div>' : '<div class="meta">עוד אין נקודות הכנה.</div>')
+    + '<div class="quick-note" style="margin-top:10px"><textarea id="prep-text" placeholder="מה להביא, מה לשאול, על מה לדבר בפגישה הבאה"></textarea>'
+    + '<button class="btn primary" id="prep-save" type="button">שמור</button></div></div>';
+
+  html += '<h3>אחרי הפגישה</h3><div class="card">'
+    + (b.lastNote ? '<div class="note" style="margin-top:0"><b>' + fmtDate(b.lastNote.date) + ' · ' + h(RESULT[b.lastNote.result] || '') + ':</b> ' + h(b.lastNote.text) + '</div>' : '<div class="meta">עוד אין סיכומים.</div>')
+    + '<div class="btns"><button class="btn primary" data-act="summary-card" data-id="' + b.id + '">+ סיכום ביקור</button></div></div>';
+
   html += '<h3>פרטים</h3><div class="card"><dl class="kv">';
   var rows = [['איש קשר', h(b.contact)], ['טלפון', b.phone ? '<span dir="ltr">' + h(b.phone) + '</span>' : ''],
     ['כתובת', h(b.address) + (b.address && b.approx ? ' <span class="meta">(מיקום משוער)</span>' : '')],
     ['שעות פתיחה', h(b.hours)], ['מה לוקח', h(b.takes)], ['אימייל', b.email ? '<span dir="ltr">' + h(b.email) + '</span>' : ''],
     ['אתר / אינסטגרם', b.web ? '<a href="' + h(webHref(b.web)) + '" target="_blank" rel="noopener" dir="ltr">' + h(b.web) + '</a>' : ''],
-    ['שם חברה / ח.פ', h(b.company)], ['הערה קבועה', h(b.note)]];
+    ['שם חברה / ח.פ', h(b.company)], ['חשוב לזכור (קבוע)', h(b.note)]];
   var any = false;
   rows.forEach(function (r) { if (r[1]) { any = true; html += '<dt>' + r[0] + '</dt><dd>' + r[1] + '</dd>'; } });
   html += '</dl>' + (any ? '' : '<div class="meta">עוד אין פרטים. לחץ "עריכת פרטים" כדי להוסיף.</div>') + '</div>';
@@ -1010,7 +1091,7 @@ function openCard(id) {
     }).join('') + '</div>';
   }
 
-  html += '<h3>הוספת הערה מהירה</h3><div class="quick-note"><textarea id="qn-text" placeholder="משהו שחשוב לזכור על העסק (אפשר להכתיב במיקרופון של המקלדת)"></textarea>'
+  html += '<h3>הערה כללית</h3><div class="quick-note"><textarea id="qn-text" placeholder="משהו שחשוב לזכור על העסק (אפשר להכתיב במיקרופון של המקלדת)"></textarea>'
     + '<button class="btn primary" id="qn-save" type="button">שמור</button></div>';
 
   html += '<h3>היסטוריה</h3>';
@@ -1029,6 +1110,14 @@ function openCard(id) {
   openSheet(b.name, html);
   var body = document.getElementById('sheet-body');
   bindActions(body);
+  document.getElementById('prep-save').addEventListener('click', function () {
+    var text = document.getElementById('prep-text').value.trim();
+    if (!text) { toast('כתוב משהו קודם'); return; }
+    var btn = this; btn.disabled = true;
+    api('saveVisit', { businessId: id, date: nextPlannedDate(id), result: 'prep', chips: [], text: text, followup: '', followupDate: '', interest: '' })
+      .then(function (data) { load(data); openCard(id); toast('נקודות ההכנה נשמרו'); })
+      .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
+  });
   document.getElementById('qn-save').addEventListener('click', function () {
     var text = document.getElementById('qn-text').value.trim();
     if (!text) { toast('כתוב משהו קודם'); return; }
@@ -1094,6 +1183,11 @@ function onAction(e) {
   else if (act === 'edit-visit') { openSummary(t.dataset.id, t.dataset.v, true); }
   else if (act === 'edit-card') { openBizForm(t.dataset.id, true); }
   else if (act === 'copy-card') { copyCard(byId[t.dataset.id]); }
+  else if (act === 'set-status') {
+    t.disabled = true;
+    setStatus(t.dataset.id, t.dataset.status).then(function (d) { load(d); openCard(t.dataset.id); toast('עודכן: ' + t.dataset.status); })
+      .catch(function (err) { t.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
+  }
   else if (act === 'close-follow-card') { t.disabled = true; api('closeFollowup', t.dataset.v).then(function (d) { load(d); openCard(t.dataset.id); toast('סומן כבוצע'); }); }
   else if (act === 'remove') { plan.stops.splice(Number(t.dataset.i), 1); plan.km = null; renderPlan(); }
   else if (act === 'up') { var i = Number(t.dataset.i); var x = plan.stops.splice(i, 1)[0]; plan.stops.splice(i - 1, 0, x); plan.km = null; renderPlan(); }
@@ -1129,6 +1223,7 @@ document.getElementById('btn-skin').addEventListener('click', openSkins);
 document.getElementById('data-q').addEventListener('input', renderData);
 document.getElementById('data-region').addEventListener('change', renderData);
 document.getElementById('data-color').addEventListener('change', renderData);
+document.getElementById('data-action').addEventListener('change', renderData);
 document.querySelectorAll('.seg [data-dtab]').forEach(function (b) {
   b.addEventListener('click', function () {
     DT.tab = b.dataset.dtab;
@@ -1173,7 +1268,7 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 3';
+var APP_VERSION = 'גרסה 4';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('today-date').value = todayIso();

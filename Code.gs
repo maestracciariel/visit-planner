@@ -15,7 +15,7 @@ var BIZ_COLS = ['id', 'שם העסק', 'סוג', 'סטטוס', 'אזור', 'אי
   'אימייל', 'שעות פתיחה', 'אתר / אינסטגרם', 'שם חברה / ח.פ'];
 var VISIT_COLS = ['id', 'תאריך', 'businessId', 'שם העסק', 'תוצאה', 'כפתורים', 'מה נאמר', 'פעולת המשך', 'תאריך המשך', 'התעניינות', 'המשך פתוח', 'נוצר'];
 var ROUTE_COLS = ['תאריך', 'עצירות', 'נקודת התחלה'];
-var RESULT_HE = { note: 'הערה', done: 'ביקרתי', owner_absent: 'הבעלים לא היה', closed_door: 'היה סגור', phone: 'שיחת טלפון', cancelled: 'בוטל' };
+var RESULT_HE = { prep: 'הכנה לפגישה', note: 'הערה', done: 'ביקרתי', owner_absent: 'הבעלים לא היה', closed_door: 'היה סגור', phone: 'שיחת טלפון', cancelled: 'בוטל' };
 function resultCode_(he) { for (var k in RESULT_HE) if (RESULT_HE[k] === he) return k; return he; }
 
 /* ---------- פתיחת האתר ---------- */
@@ -47,6 +47,9 @@ function onOpen() {
     .addItem('1. הכנת הגיליונות', 'setup')
     .addItem('2. מיקום כתובות על המפה', 'geocodeAll')
     .addItem('3. בדיקה ותיקון של כל המיקומים', 'recheckLocations')
+    .addSeparator()
+    .addItem('4. הפעלת עדכון אוטומטי (פעם אחת)', 'setupAutoUpdate')
+    .addItem('5. עדכון עכשיו', 'updateNow')
     .addToUi();
 }
 
@@ -341,3 +344,91 @@ function optimizeRoute(stopIds, startAddress) {
   if (!startAddress) order = [stops[0].id].concat(order, [stops[stops.length - 1].id]);
   return { order: order, km: Math.round(km), minutes: Math.round(min) };
 }
+
+/* ---------- עדכון אוטומטי ----------
+ * Claude מעלה גרסאות חדשות ל-GitHub. פעם בשעה הסקריפט בודק אם יש גרסה חדשה,
+ * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
+ * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
+ */
+var CODE_VERSION = 4;
+var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
+
+function setupAutoUpdate() {
+  ScriptApp.getProjectTriggers().forEach(function (t) {
+    if (t.getHandlerFunction() === 'autoUpdate_') ScriptApp.deleteTrigger(t);
+  });
+  ScriptApp.newTrigger('autoUpdate_').timeBased().everyHours(1).create();
+  var msg = updateNow_(true);
+  try { SpreadsheetApp.getUi().alert('העדכון האוטומטי פועל.\nמעכשיו האתר מתעדכן לבד פעם בשעה.\n\n' + msg); } catch (e) {}
+  return msg;
+}
+
+function updateNow() {
+  var msg = updateNow_(true);
+  try { SpreadsheetApp.getUi().alert(msg); } catch (e) {}
+  return msg;
+}
+
+function autoUpdate_() { updateNow_(false); }
+
+function fetchText_(name) {
+  var res = UrlFetchApp.fetch(REPO_RAW + name + '?t=' + Date.now(), { muteHttpExceptions: true });
+  if (res.getResponseCode() !== 200) throw new Error('לא הצלחתי להוריד את ' + name + ' מ-GitHub');
+  return res.getContentText('UTF-8');
+}
+
+function scriptApi_(method, path, body) {
+  var res = UrlFetchApp.fetch('https://script.googleapis.com/v1/projects/' + ScriptApp.getScriptId() + path, {
+    method: method, contentType: 'application/json', muteHttpExceptions: true,
+    headers: { Authorization: 'Bearer ' + ScriptApp.getOAuthToken() },
+    payload: body ? JSON.stringify(body) : undefined
+  });
+  var code = res.getResponseCode(), text = res.getContentText();
+  if (code >= 300) {
+    if (text.indexOf('has not been used') >= 0 || text.indexOf('disabled') >= 0 || code === 403) {
+      throw new Error('צריך להפעיל פעם אחת את Google Apps Script API: script.google.com/home/usersettings');
+    }
+    throw new Error('שגיאה מגוגל (' + code + '): ' + text.slice(0, 200));
+  }
+  return text ? JSON.parse(text) : {};
+}
+
+/** מחזיר הודעה קצרה בעברית על מה שקרה */
+function updateNow_(manual) {
+  var props = PropertiesService.getScriptProperties();
+  try {
+    var code = fetchText_('Code.gs');
+    var m = code.match(/var CODE_VERSION = (\d+);/);
+    var remote = m ? Number(m[1]) : 0;
+    if (!remote || remote <= CODE_VERSION) {
+      props.setProperty('lastCheck', new Date().toISOString());
+      return 'אין עדכון חדש. הגרסה שלך: ' + CODE_VERSION + '.';
+    }
+    var html = fetchText_('index.html');
+    var manifest = fetchText_('appsscript.json');
+    scriptApi_('put', '/content', { files: [
+      { name: 'appsscript', type: 'JSON', source: manifest },
+      { name: 'Code', type: 'SERVER_JS', source: code },
+      { name: 'index', type: 'HTML', source: html }
+    ] });
+    var ver = scriptApi_('post', '/versions', { description: 'עדכון אוטומטי לגרסה ' + remote });
+    var deps = scriptApi_('get', '/deployments').deployments || [];
+    var moved = 0;
+    deps.forEach(function (d) {
+      var cfg = d.deploymentConfig || {};
+      if (!cfg.versionNumber) return; // הפריסה של מצב העריכה (HEAD), לא נוגעים
+      scriptApi_('put', '/deployments/' + d.deploymentId, { deploymentConfig: {
+        scriptId: ScriptApp.getScriptId(), versionNumber: ver.versionNumber,
+        manifestFileName: 'appsscript', description: 'גרסה ' + remote + ' (אוטומטי)'
+      } });
+      moved++;
+    });
+    props.setProperty('lastUpdate', new Date().toISOString() + ' → ' + remote);
+    return 'עודכן לגרסה ' + remote + '. פורסמו ' + moved + ' פריסות.';
+  } catch (e) {
+    props.setProperty('lastError', new Date().toISOString() + ' ' + e.message);
+    if (manual) return 'העדכון לא הצליח: ' + e.message;
+    return '';
+  }
+}
+
