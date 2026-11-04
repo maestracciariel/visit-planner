@@ -6,22 +6,27 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>מתכנן ביקורים</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Heebo:wght@400;500;600;700;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&display=swap">
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <style>
-/* פריסה: אפליקציית שטח לטלפון — כותרת לבנה דקה, מסך אחד בכל פעם, סרגל ניווט צף בתחתית */
+/* פריסה: מערכת ניהול בצבעי MOZ. במחשב תפריט צד כהה מימין ותוכן על רקע בהיר, בטלפון כותרת וסרגל תחתון. צבעים מתוך MOZ Color Guide */
 :root {
-  --bg: #f3f5f7;
+  --bg: #f4f6f2;
   --surface: #ffffff;
-  --surface-2: #f5f7f9;
-  --ink: #0f1b2d;
-  --muted: #64748b;
-  --line: #e5e9ee;
-  --accent: #0b7a64;
-  --accent-strong: #08624f;
+  --surface-2: #f2f5ef;
+  --ink: #3a3f3b;
+  --muted: #767d76;
+  --line: #e1e6dd;
+  --accent: #506954;
+  --accent-strong: #3d5241;
   --accent-ink: #ffffff;
-  --accent-soft: #e2f3ee;
+  --accent-soft: #e2fbeb;
+  --accent-mid: #9db694;
+  --gold: #e4c679;
+  --brand-orange: #e46035;
+  --side: #26332a;
+  --side-ink: #dfe7dc;
   --danger: #c2372b;
   --c-green: #22a05a;
   --c-yellow: #eab308;
@@ -32,8 +37,8 @@
   --shadow-sm: 0 1px 2px rgba(15, 27, 45, .06), 0 1px 3px rgba(15, 27, 45, .05);
   --shadow-md: 0 4px 14px rgba(15, 27, 45, .08), 0 1px 3px rgba(15, 27, 45, .06);
   --shadow-lg: 0 12px 32px rgba(15, 27, 45, .14), 0 2px 6px rgba(15, 27, 45, .06);
-  --font-body: "Heebo", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
-  --radius: 16px;
+  --font-body: "Rubik", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+  --radius: 12px;
   --nav-h: 64px;
 }
 :root { color-scheme: light; }
@@ -393,22 +398,145 @@ html[data-skin="night"] .tl-chips span { color: var(--accent); }
 html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; color: var(--ink) !important; border-color: var(--line) !important; }
 
 .leaflet-popup-content-wrapper, .leaflet-popup-tip { background: var(--surface); color: var(--ink); }
+/* ===== מבנה MOZ: תפריט צד, כותרות דף, טבלאות ירוקות ===== */
+body { flex-direction: row; }
+.app { flex: 1; min-width: 0; display: flex; flex-direction: column; height: 100%; }
+aside.side { display: none; }
+@media (min-width: 1000px) {
+  aside.side { display: flex; flex-direction: column; width: 244px; flex: none; background: var(--side); color: var(--side-ink); height: 100%; overflow-y: auto; }
+  nav.tabs { display: none; }
+  header.top .logo-img, #btn-menu { display: none !important; }
+  header.top { box-shadow: none; border-bottom: 1px solid var(--line); }
+}
+.side-logo { background: var(--accent); padding: 18px 20px 14px; }
+.side-logo img { width: 120px; display: block; }
+.side-logo span { display: block; color: #fff; font-size: 12px; font-weight: 600; margin-top: 6px; opacity: .9; }
+.side-menu { display: flex; flex-direction: column; gap: 4px; padding: 14px 10px; flex: 1; }
+.side-menu button { display: flex; align-items: center; gap: 12px; border: 0; background: none; color: var(--side-ink); font: inherit; font-size: 15px; font-weight: 500; text-align: start; padding: 11px 14px; border-radius: 10px; cursor: pointer; }
+.side-menu button svg { width: 20px; height: 20px; flex: none; opacity: .85; }
+.side-menu button:hover { background: rgba(255,255,255,.06); }
+.side-menu button[aria-current="true"] { background: var(--accent); color: #fff; font-weight: 700; }
+.side-menu .sb { margin-inline-start: auto; background: var(--brand-orange); color: #fff; border-radius: 999px; font-size: 11.5px; font-weight: 800; min-width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center; padding: 0 6px; }
+.side-foot { padding: 14px 16px 18px; border-top: 1px solid rgba(255,255,255,.08); display: grid; gap: 10px; }
+.side-foot .btn.primary { width: 100%; background: var(--gold); color: #2d2a1c; box-shadow: none; }
+.side-foot .meta { color: var(--side-ink); opacity: .7; font-size: 12.5px; text-align: center; }
+header.top .logo-img { height: 30px; width: auto; display: block; }
+#btn-skin { display: none !important; }
+@media (max-width: 999px) { header.top h1 { display: none; } }
+header.top h1 { color: var(--accent); }
+.logo { display: none !important; }
+h2 { color: var(--accent); font-weight: 700; }
+.page-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.page-head h2 { margin: 0; flex: 1; }
+.chips-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.fchip { border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: 14px; font-weight: 600; height: 38px; padding: 0 16px; border-radius: 999px; cursor: pointer; white-space: nowrap; }
+.fchip[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.fchip.c-late:not([aria-pressed="true"]) { color: var(--c-red); }
+.fchip.c-done:not([aria-pressed="true"]) { color: var(--c-green); }
+.fchip.c-open:not([aria-pressed="true"]) { color: var(--c-blue); }
+/* טבלאות בסגנון MOZ */
+.table-wrap { border-radius: 10px; }
+table.data th { background: var(--accent); color: #fff; font-size: 13.5px; font-weight: 600; border-inline-start: 1px solid rgba(255,255,255,.22); }
+table.data th:first-child { background: var(--accent); }
+table.data tbody tr:hover td { background: var(--accent-soft); }
+table.data th[aria-sort]::after { opacity: .9; }
+/* כפתורים ראשיים */
+.btn.primary, .icon-btn.primary { background: var(--accent); box-shadow: 0 2px 6px rgba(80,105,84,.25); }
+.badge { background: var(--brand-orange); }
+nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--accent-soft); }
+/* לוח בקרה */
+#view-dash > * { max-width: 1400px; }
+.kpis-dash { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
+.kpi .v { display: flex; align-items: center; gap: 8px; }
+.kpi .v svg { width: 22px; height: 22px; }
+.kpi.k-green .v { color: var(--accent); } .kpi.k-blue .v { color: var(--c-blue); }
+.kpi.k-orange .v { color: var(--brand-orange); } .kpi.k-red .v { color: var(--c-red); } .kpi.k-gold .v { color: #b8932e; }
+.pillx { display: inline-block; margin-top: 6px; border-radius: 999px; padding: 1px 9px; font-size: 12px; font-weight: 700; white-space: nowrap; }
+.pillx.red { background: color-mix(in srgb, var(--c-red) 14%, transparent); color: var(--c-red); }
+.pillx.blue { background: color-mix(in srgb, var(--c-blue) 14%, transparent); color: var(--c-blue); }
+.pillx.green { background: var(--accent-soft); color: var(--accent); }
+.dash-grid { display: grid; gap: 14px; grid-template-columns: 1fr; }
+.dash-grid > * { min-width: 0; }
+.brand .sub { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+@media (min-width: 1000px) { .dash-grid { grid-template-columns: 1.25fr 1fr; } }
+.vbars { position: relative; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 12px; align-items: end; height: 220px; padding: 8px 4px 0; border-bottom: 1px solid var(--line);
+  background-image: repeating-linear-gradient(to top, transparent 0, transparent 54px, var(--line) 54px, var(--line) 55px); }
+.vbar { display: flex; flex-direction: column; align-items: center; justify-content: flex-end; height: 100%; gap: 4px; cursor: default; }
+.vbar .val { font-size: 12.5px; font-weight: 700; color: var(--ink); font-variant-numeric: tabular-nums; }
+.vbar .col { width: 70%; max-width: 64px; background: var(--accent); border-radius: 4px 4px 0 0; min-height: 2px; transition: background .12s; }
+.vbar:hover .col, .vbar.cur .col { background: var(--accent-strong); }
+.vbar.cur .col { background: var(--gold); }
+.vlabels { display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; gap: 12px; padding: 6px 4px 0; font-size: 12.5px; color: var(--muted); text-align: center; }
+.cal-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.cal-head strong { flex: 1; text-align: center; font-size: 16px; }
+.cal-nav { border: 0; background: var(--surface-2); width: 34px; height: 34px; border-radius: 8px; font: inherit; font-size: 16px; cursor: pointer; color: var(--ink); }
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.cal .dow { text-align: center; color: var(--muted); font-size: 12.5px; padding: 2px 0 6px; }
+.cal .day { position: relative; min-height: 54px; border: 1px solid var(--line); border-radius: 8px; padding: 4px 6px; font-size: 13.5px; background: var(--surface); cursor: pointer; text-align: start; font: inherit; color: var(--ink); display: flex; flex-direction: column; align-items: flex-start; }
+.cal .day.out { color: var(--muted); opacity: .55; }
+.cal .day.today { background: var(--accent-soft); border-color: var(--accent-mid); font-weight: 700; }
+.cal .day .cnt { position: absolute; inset-inline-end: 4px; top: 4px; background: var(--accent); color: #fff; border-radius: 999px; font-size: 11px; font-weight: 700; min-width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; padding: 0 5px; }
+.cal .day .dn { margin-top: auto; font-size: 11px; color: var(--c-green); font-weight: 700; }
+.rlist .rrow { display: flex; align-items: center; gap: 10px; padding: 9px 2px; border-bottom: 1px solid var(--line); }
+.rlist .rrow:last-child { border-bottom: 0; }
+.rlist .rname { flex: 1; }
+.rlist .rnum { font-weight: 700; font-variant-numeric: tabular-nums; }
+.rlist .rpill { background: var(--accent-soft); color: var(--accent); border-radius: 999px; font-size: 12px; font-weight: 700; padding: 1px 9px; }
 @media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }
 </style>
 </head>
 <body>
 <div class="loading" id="loading">טוען את הלקוחות…</div>
 
+<aside class="side" aria-label="תפריט ראשי">
+  <div class="side-logo"><img src="data:image/png;base64,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" alt="MOZ"><span>מתכנן ביקורים</span></div>
+  <nav class="side-menu">
+    <button type="button" data-view="dash"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a9 9 0 1 1 18 0"/><path d="M12 13l4-4"/><circle cx="12" cy="13" r="1.5"/></svg><span>לוח בקרה</span></button>
+    <button type="button" data-view="map"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg><span>מפה</span></button>
+    <button type="button" data-view="crm"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M21.5 20a6.5 6.5 0 0 0-4-6"/></svg><span>לקוחות</span></button>
+    <button type="button" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span>בניית קו</span></button>
+    <button type="button" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>בדרך</span></button>
+    <button type="button" data-view="follow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>פעולות להמשך</span><span class="sb" id="side-badge" hidden></span></button>
+    <button type="button" data-view="summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>סיכום ושבוע</span></button>
+    <button type="button" data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg><span>כל הנתונים</span></button>
+    <button type="button" data-view="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>מה מחכה לי</span></button>
+  </nav>
+  <div class="side-foot"><button class="btn primary" type="button" id="side-add">+ עסק חדש</button><div class="meta" id="side-version"></div></div>
+</aside>
+<div class="app">
 <header class="top">
+  <img class="logo-img" src="data:image/png;base64,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" alt="MOZ">
   <div class="logo" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg></div>
   <div class="brand"><h1>מתכנן ביקורים</h1><div class="sub" id="today-label"></div></div>
   <button class="icon-btn" id="btn-menu" type="button" aria-label="כל הדפים" title="כל הדפים"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button>
-  <button class="icon-btn" id="btn-skin" type="button" aria-label="בחירת עיצוב" title="עיצוב"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A4.6 4.6 0 0 0 21 9.8C21 6 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></button>
+  <button class="icon-btn" id="btn-skin" hidden type="button" aria-label="בחירת עיצוב" title="עיצוב"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3a9 9 0 1 0 0 18c1.1 0 2-.9 2-2 0-.5-.2-1-.5-1.3-.3-.4-.5-.8-.5-1.3 0-1.1.9-2 2-2h2.4A4.6 4.6 0 0 0 21 9.8C21 6 17 3 12 3z"/><circle cx="7.5" cy="11.5" r="1.2"/><circle cx="10" cy="7.5" r="1.2"/><circle cx="15" cy="7.5" r="1.2"/></svg></button>
   <button class="icon-btn primary" id="btn-add" type="button" aria-label="הוספת עסק">+ עסק</button>
 </header>
 
 <main>
-  <section class="view" id="view-map">
+  <section class="view" id="view-dash">
+    <div class="page-head">
+      <h2>לוח בקרה</h2>
+      <div class="chips-row" id="dash-period">
+        <button type="button" class="fchip" data-p="day" aria-pressed="false">היום</button>
+        <button type="button" class="fchip" data-p="week" aria-pressed="false">השבוע</button>
+        <button type="button" class="fchip" data-p="month" aria-pressed="true">החודש</button>
+      </div>
+    </div>
+    <div class="kpis kpis-dash" id="dash-kpis"></div>
+    <div class="dash-grid">
+      <div class="card"><div class="chart-title">ביקורים לפי חודש</div><div id="dash-chart"></div></div>
+      <div class="card">
+        <div class="cal-head"><button class="cal-nav" type="button" id="cal-prev" aria-label="חודש קודם">›</button><strong id="cal-label"></strong><button class="cal-nav" type="button" id="cal-next" aria-label="חודש הבא">‹</button><button class="btn small" type="button" id="cal-today">היום</button></div>
+        <div class="cal" id="dash-cal"></div>
+        <div class="count-line" style="margin:8px 0 0">המספר בירוק = עצירות בקו של אותו יום. לחיצה על יום פותחת את בניית הקו.</div>
+      </div>
+      <div class="card"><div class="chart-title">לקוחות פעילים לפי אזור</div><div class="rlist" id="dash-regions"></div></div>
+      <div class="card"><div class="chart-title">ביקורים אחרונים</div><div class="table-wrap" style="max-height:340px;min-height:0"><table class="data" id="dash-recent"></table></div></div>
+    </div>
+  </section>
+
+  <section class="view" id="view-map" hidden>
     <div id="map" role="region" aria-label="מפת לקוחות ועסקים"></div>
     <div class="map-tools">
       <div class="search-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="search" id="map-search" type="search" placeholder="חיפוש עסק, יישוב או טלפון" autocomplete="off" aria-label="חיפוש"></div>
@@ -419,6 +547,7 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
 
   <section class="view" id="view-plan" hidden>
     <h2>בניית קו ליום</h2>
+    <div class="chips-row" id="plan-chips" style="margin-bottom:10px"></div>
     <div class="toolbar">
       <input type="date" id="plan-date" aria-label="תאריך">
       <span class="meta" id="plan-count"></span>
@@ -456,6 +585,7 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
       <h2 style="margin:0;flex:1">הקו שלי</h2>
       <input type="date" id="today-date" aria-label="תאריך">
     </div>
+    <div class="chips-row" id="today-chips" style="margin-bottom:12px"></div>
     <div class="list" id="today-list"></div>
   </section>
 
@@ -487,11 +617,11 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
 
   <section class="view" id="view-follow" hidden>
     <h2>פעולות להמשך</h2>
-    <div class="seg" role="group" aria-label="איזה פעולות" id="follow-tab">
-      <button type="button" data-f="open" aria-pressed="true">פתוחות</button>
-      <button type="button" data-f="late" aria-pressed="false">באיחור</button>
-      <button type="button" data-f="done" aria-pressed="false">בוצעו</button>
-      <button type="button" data-f="all" aria-pressed="false">הכול</button>
+    <div class="chips-row" role="group" aria-label="איזה פעולות" id="follow-tab" style="margin-bottom:12px">
+      <button type="button" class="fchip" data-f="all" aria-pressed="false">הכול</button>
+      <button type="button" class="fchip c-open" data-f="open" aria-pressed="true">פתוחות</button>
+      <button type="button" class="fchip c-late" data-f="late" aria-pressed="false">באיחור</button>
+      <button type="button" class="fchip c-done" data-f="done" aria-pressed="false">בוצעו</button>
     </div>
     <div class="data-tools"><div class="search-wrap data-search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input type="search" id="follow-q" placeholder="חפש עסק או פעולה…" autocomplete="off" aria-label="חיפוש"></div></div>
     <div class="count-line" id="follow-count"></div>
@@ -544,10 +674,10 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
 </main>
 
 <nav class="tabs" role="tablist">
-  <button type="button" role="tab" data-view="map" aria-selected="true">
+  <button type="button" role="tab" data-view="dash" aria-selected="true">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a9 9 0 1 1 18 0"/><path d="M12 13l4-4"/><circle cx="12" cy="13" r="1.5"/></svg>לוח בקרה</button>
+  <button type="button" role="tab" data-view="map" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>מפה</button>
-  <button type="button" role="tab" data-view="plan" aria-selected="false">
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>בניית קו</button>
   <button type="button" role="tab" data-view="today" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>בדרך</button>
   <button type="button" role="tab" data-view="crm" aria-selected="false">
@@ -555,6 +685,7 @@ html[data-skin="night"] .leaflet-bar a { background: var(--surface) !important; 
   <button type="button" role="tab" data-view="more" aria-selected="false">
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/></svg><span>עוד<span class="badge" id="open-badge" hidden></span></span></button>
 </nav>
+</div>
 
 <div class="sheet-wrap" id="sheet" hidden>
   <div class="sheet" role="dialog" aria-modal="true" aria-labelledby="sheet-title">
@@ -779,7 +910,14 @@ function setPlanDate(d) {
   document.getElementById('plan-date').value = d;
   renderPlan();
 }
+function dateChips(elId, current, pick) {
+  var t = todayIso(), opts = [[t, 'היום'], [addDays(t, 1), 'מחר'], [addDays(t, 2), '+2 ימים'], [addDays(t, 3), '+3 ימים']];
+  var el = document.getElementById(elId);
+  el.innerHTML = opts.map(function (o) { return '<button type="button" class="fchip" data-d="' + o[0] + '" aria-pressed="' + (o[0] === current) + '">' + o[1] + ' · ' + Number(o[0].slice(8)) + '/' + Number(o[0].slice(5, 7)) + '</button>'; }).join('');
+  el.querySelectorAll('.fchip').forEach(function (b) { b.onclick = function () { pick(b.dataset.d); }; });
+}
 function renderPlan() {
+  dateChips('plan-chips', plan.date, function (d) { setPlanDate(d); });
   document.getElementById('plan-count').textContent = plan.stops.length + ' עצירות · ' + fmtDate(plan.date);
   var el = document.getElementById('plan-stops');
   if (!plan.stops.length) el.innerHTML = '<div class="card empty">עוד אין עצירות ביום הזה. חפש עסק למטה, או לחץ "+ לקו" על נקודה במפה.</div>';
@@ -852,6 +990,7 @@ function addToPlan(id) {
 /* ===== בדרך (היום) ===== */
 function renderToday() {
   var d = document.getElementById('today-date').value || todayIso();
+  dateChips('today-chips', d, function (x) { document.getElementById('today-date').value = x; renderToday(); });
   var r = S.routes.filter(function (x) { return x.date === d; })[0];
   var stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
   var el = document.getElementById('today-list');
@@ -1174,6 +1313,10 @@ function renderFollow() {
     return a - c;
   });
   var lateCount = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < t; }).length;
+  var withF = S.visits.filter(function (v) { return v.followup && byId[v.businessId]; });
+  var cnt = { all: withF.length, open: withF.filter(function (v) { return v.followupOpen; }).length, late: lateCount, done: withF.filter(function (v) { return !v.followupOpen; }).length };
+  var lab = { all: 'הכול', open: 'פתוחות', late: 'באיחור', done: 'בוצעו' };
+  document.querySelectorAll('#follow-tab .fchip').forEach(function (b) { b.textContent = lab[b.dataset.f] + ' (' + cnt[b.dataset.f] + ')'; });
   document.getElementById('follow-count').textContent = rows.length + ' פעולות' + (lateCount ? ' · ' + lateCount + ' באיחור' : '') + ' · לחיצה על שורה פותחת את כרטיס העסק';
   var head = '<thead><tr><th>שם העסק</th><th>ימים לדדליין</th><th>תאריך המשך</th><th>פעולת המשך</th><th>מה נאמר בביקור</th><th>תאריך הביקור</th><th>סוג</th><th>טלפון</th><th>מצב</th></tr></thead>';
   var body = rows.map(function (r) {
@@ -1289,12 +1432,95 @@ function renderWeek() {
   tb.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
 }
 
+/* ===== לוח בקרה ===== */
+var DASH = { period: 'month', calMonth: null };
+var KICON = {
+  visit: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>',
+  people: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>',
+  star: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1-4.4-4.3 6.1-.9z"/></svg>',
+  clock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',
+  route: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>',
+  alert: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 9v4M12 17h.01"/><path d="M10.3 3.9 1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>'
+};
+function periodRange(p) {
+  var t = todayIso();
+  if (p === 'day') return [t, t];
+  if (p === 'week') { var s0 = weekStart(t); return [s0, addDays(s0, 6)]; }
+  return [t.slice(0, 8) + '01', t.slice(0, 8) + '31'];
+}
+function isReal(v) { return ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; }
+function renderDash() {
+  var r = periodRange(DASH.period), inR = function (d) { return d && d >= r[0] && d <= r[1]; };
+  var pname = { day: 'היום', week: 'השבוע', month: 'החודש' }[DASH.period];
+  var real = S.visits.filter(function (v) { return inR(v.date) && isReal(v); });
+  var leadV = real.filter(function (v) { return byId[v.businessId] && byId[v.businessId].kind === 'lead'; });
+  var hot = real.filter(function (v) { return v.interest === 'חם'; }).length;
+  var planned = 0; S.routes.forEach(function (x) { if (inR(x.date)) planned += x.stops.filter(function (id) { return byId[id]; }).length; });
+  var active = S.businesses.filter(function (b) { return b.kind === 'client' && b.status === 'פעיל'; });
+  var stale = active.filter(function (b) { return b.color === 'orange'; }).length;
+  var open = S.visits.filter(function (v) { return v.followupOpen; }).length;
+  var late = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
+  var leads = S.businesses.filter(function (b) { return b.kind === 'lead' && b.color === 'blue'; }).length;
+  var k = function (cls, label, v, icon, pill) { return '<div class="kpi ' + cls + '"><div class="l">' + label + '</div><div class="v">' + v + icon + '</div>' + (pill || '') + '</div>'; };
+  document.getElementById('dash-kpis').innerHTML =
+    k('k-green', 'ביקורים ' + pname, real.length, KICON.visit, planned ? '<span class="pillx green">' + planned + ' מתוכננים</span>' : '')
+    + k('k-blue', 'ביקורים בעסקים חדשים', leadV.length, KICON.star, hot ? '<span class="pillx blue">' + hot + ' חמים</span>' : '')
+    + k('k-orange', 'פעולות פתוחות', open, KICON.clock, late ? '<span class="pillx red">' + late + ' באיחור</span>' : '')
+    + k('k-gold', 'לקוחות פעילים', active.length, KICON.people)
+    + k('k-red', 'לא ביקרתי מעל חודשיים', stale, KICON.alert)
+    + k('k-blue', 'עסקים פוטנציאליים', leads, KICON.route);
+  document.querySelectorAll('#dash-period .fchip').forEach(function (b) { b.setAttribute('aria-pressed', b.dataset.p === DASH.period); });
+  // ביקורים לפי חודש: 6 החודשים האחרונים
+  var months = [], t = todayIso();
+  for (var i = 5; i >= 0; i--) { var d = new Date(Number(t.slice(0, 4)), Number(t.slice(5, 7)) - 1 - i, 15); months.push(iso(d).slice(0, 7)); }
+  var counts = months.map(function (m) { return S.visits.filter(function (v) { return v.date && v.date.slice(0, 7) === m && isReal(v); }).length; });
+  var max = Math.max.apply(null, counts.concat([1]));
+  document.getElementById('dash-chart').innerHTML = '<div class="vbars">' + months.map(function (m, i) {
+    return '<div class="vbar' + (i === 5 ? ' cur' : '') + '" title="' + monthLabel(m) + ': ' + counts[i] + ' ביקורים"><span class="val">' + counts[i] + '</span><span class="col" style="height:' + (counts[i] / max * 85) + '%"></span></div>';
+  }).join('') + '</div><div class="vlabels">' + months.map(function (m) { return '<span>' + m.slice(5, 7) + '/' + m.slice(0, 4) + '</span>'; }).join('') + '</div>';
+  renderCal();
+  // לקוחות פעילים לפי אזור
+  var reg = {}; active.forEach(function (b) { var x = b.region || 'בלי אזור'; reg[x] = reg[x] || { n: 0, stale: 0 }; reg[x].n++; if (b.color === 'orange') reg[x].stale++; });
+  document.getElementById('dash-regions').innerHTML = Object.keys(reg).sort(function (a, b) { return reg[b].n - reg[a].n; }).map(function (x) {
+    return '<div class="rrow"><span class="rname">' + h(x) + '</span>' + (reg[x].stale ? '<span class="pillx red" style="margin:0">' + reg[x].stale + ' לא ביקרתי</span>' : '') + '<span class="rpill">' + reg[x].n + '</span></div>';
+  }).join('');
+  // ביקורים אחרונים
+  var recent = S.visits.filter(function (v) { return isReal(v) && byId[v.businessId]; }).slice(0, 10);
+  document.getElementById('dash-recent').innerHTML = '<thead><tr><th>עסק</th><th>תאריך</th><th>מה היה</th><th>פעולת המשך</th></tr></thead><tbody>'
+    + (recent.map(function (v) {
+      var b = byId[v.businessId];
+      return '<tr data-id="' + b.id + '"><td><span class="cell-name"><span class="dot ' + b.color + '"></span>' + h(b.name) + '</span></td><td>' + fmtDate(v.date).replace('יום ', '') + '</td><td>' + h(RESULT[v.result] || '') + '</td><td class="wrap">' + h(v.followup || '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="4" class="empty">עוד אין ביקורים.</td></tr>') + '</tbody>';
+  document.querySelectorAll('#dash-recent tbody tr[data-id]').forEach(function (tr) { tr.onclick = function () { openCard(tr.dataset.id); }; });
+}
+function renderCal() {
+  var t = todayIso();
+  if (!DASH.calMonth) DASH.calMonth = t.slice(0, 7);
+  var y = Number(DASH.calMonth.slice(0, 4)), m = Number(DASH.calMonth.slice(5, 7)) - 1;
+  document.getElementById('cal-label').textContent = MONTHS_HE[m] + ' ' + y;
+  var first = iso(new Date(y, m, 1, 12)), start = addDays(first, -new Date(y, m, 1, 12).getDay());
+  var html = ['א', 'ב', 'ג', 'ד', 'ה', 'ו', 'ש'].map(function (d) { return '<div class="dow">' + d + '</div>'; }).join('');
+  for (var i = 0; i < 42; i++) {
+    var d = addDays(start, i);
+    if (i === 35 && d.slice(0, 7) !== DASH.calMonth) break;
+    var r = S.routes.filter(function (x) { return x.date === d; })[0];
+    var n = r ? r.stops.filter(function (id) { return byId[id]; }).length : 0;
+    var done = S.visits.filter(function (v) { return v.date === d && (v.result === 'done' || v.result === 'owner_absent'); }).length;
+    html += '<button type="button" class="day' + (d.slice(0, 7) !== DASH.calMonth ? ' out' : '') + (d === t ? ' today' : '') + '" data-d="' + d + '" aria-label="' + fmtDate(d) + (n ? ', ' + n + ' עצירות' : '') + '">'
+      + '<span>' + Number(d.slice(8)) + '</span>' + (n ? '<span class="cnt">' + n + '</span>' : '') + (done ? '<span class="dn">' + done + ' ✓</span>' : '') + '</button>';
+  }
+  var el = document.getElementById('dash-cal');
+  el.innerHTML = html;
+  el.querySelectorAll('.day').forEach(function (b) { b.onclick = function () { setPlanDate(b.dataset.d); show('plan'); }; });
+}
+
 /* ===== תפריט "עוד" ===== */
 function openMore() {
   var late = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
   var open = S.visits.filter(function (v) { return v.followupOpen; }).length;
   var tile = function (view, icon, title, sub) { return '<button type="button" class="more-tile" data-go="' + view + '">' + icon + '<strong>' + title + '</strong><span>' + sub + '</span></button>'; };
   openSheet('כל הדפים', '<div class="more-grid">'
+    + tile('dash', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 13a9 9 0 1 1 18 0"/><path d="M12 13l4-4"/><circle cx="12" cy="13" r="1.5"/></svg>', 'לוח בקרה', 'מספרים, לוח שנה וגרף')
     + tile('map', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2z"/><path d="M9 4v14M15 6v14"/></svg>', 'מפה', 'כל העסקים בצבעים')
     + tile('crm', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20a6.5 6.5 0 0 1 13 0"/></svg>', 'לקוחות', 'כל המידע על כל לקוח')
     + tile('plan', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>', 'בניית קו', 'תכנון יום עבודה')
@@ -1323,9 +1549,8 @@ function currentSkin() {
   try {
     // מצב יום בכל הדפים: מעבירים פעם אחת כל מכשיר לעיצוב "שטח" הבהיר
     if (localStorage.getItem('vp-skin-reset2') !== '1') { localStorage.setItem('vp-skin', 'field'); localStorage.setItem('vp-skin-reset2', '1'); }
-    k = localStorage.getItem('vp-skin') || 'field';
   } catch (e) {}
-  return SKINS[k] ? k : 'field';
+  return 'field'; // עיצוב אחד בצבעי MOZ
 }
 function applySkin(k) {
   document.documentElement.dataset.skin = k;
@@ -1531,11 +1756,14 @@ function onAction(e) {
 }
 function bindActions(root) { root.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = onAction; }); }
 
-var CURRENT_VIEW = 'map';
+var CURRENT_VIEW = 'dash';
 function show(view) {
   if (view === 'more') { openMore(); return; }
   CURRENT_VIEW = view;
-  var navView = ['follow', 'summary', 'data', 'open'].indexOf(view) >= 0 ? 'more' : view;
+  var navView = ['follow', 'summary', 'data', 'open', 'plan'].indexOf(view) >= 0 ? 'more' : view;
+  document.querySelectorAll('.side-menu button').forEach(function (b) { b.setAttribute('aria-current', b.dataset.view === view); });
+  if (view === 'dash') renderDash();
+  if (view === 'map' && map && !mapFitted) { setTimeout(fitMapOnce, 80); }
   document.querySelectorAll('.view').forEach(function (v) { v.hidden = v.id !== 'view-' + view; });
   document.querySelectorAll('nav.tabs button').forEach(function (b) { b.setAttribute('aria-selected', b.dataset.view === navView); });
   if (view === 'crm') renderCrm();
@@ -1546,13 +1774,19 @@ function show(view) {
   if (view === 'open') renderOpen();
   if (view === 'data') { renderDataFilters(); renderData(); }
 }
-var fitted = false;
+var mapFitted = false;
+function fitMapOnce() {
+  if (mapFitted || !map) return;
+  map.invalidateSize();
+  var pts = S.businesses.filter(function (b) { return b.lat != null && b.color !== 'black'; }).map(function (b) { return [b.lat, b.lng]; });
+  if (pts.length) { map.fitBounds(pts, { padding: [30, 30] }); mapFitted = true; }
+}
 function renderAll() {
   renderMap();
-  if (!fitted) {
-    var pts = S.businesses.filter(function (b) { return b.lat != null && b.color !== 'black'; }).map(function (b) { return [b.lat, b.lng]; });
-    if (pts.length) { map.fitBounds(pts, { padding: [30, 30] }); fitted = true; }
-  }
+  if (CURRENT_VIEW === 'map') fitMapOnce();
+  if (CURRENT_VIEW === 'dash') renderDash();
+  var late = S.visits.filter(function (v) { return v.followupOpen && v.followupDate && v.followupDate < todayIso(); }).length;
+  var sb = document.getElementById('side-badge'); if (sb) { sb.hidden = !late; sb.textContent = late; }
   setPlanDate(plan.date || todayIso());
   renderToday();
   renderOpen();
@@ -1567,6 +1801,12 @@ document.querySelectorAll('nav.tabs button').forEach(function (b) { b.addEventLi
 document.getElementById('sheet-close').addEventListener('click', closeSheet);
 document.getElementById('btn-skin').addEventListener('click', openSkins);
 document.getElementById('btn-menu').addEventListener('click', openMore);
+document.querySelectorAll('.side-menu button').forEach(function (b) { b.addEventListener('click', function () { show(b.dataset.view); }); });
+document.getElementById('side-add').addEventListener('click', function () { openBizForm(null); });
+document.querySelectorAll('#dash-period .fchip').forEach(function (b) { b.addEventListener('click', function () { DASH.period = b.dataset.p; renderDash(); }); });
+document.getElementById('cal-prev').addEventListener('click', function () { var y = Number(DASH.calMonth.slice(0, 4)), m = Number(DASH.calMonth.slice(5, 7)) - 2; DASH.calMonth = iso(new Date(y, m, 15)).slice(0, 7); renderCal(); });
+document.getElementById('cal-next').addEventListener('click', function () { var y = Number(DASH.calMonth.slice(0, 4)), m = Number(DASH.calMonth.slice(5, 7)); DASH.calMonth = iso(new Date(y, m, 15)).slice(0, 7); renderCal(); });
+document.getElementById('cal-today').addEventListener('click', function () { DASH.calMonth = todayIso().slice(0, 7); renderCal(); });
 document.getElementById('crm-q').addEventListener('input', function () { CRM.id = window.innerWidth >= 900 ? CRM.id : null; document.querySelector('.crm-grid').classList.remove('has-profile'); renderCrm(); });
 document.querySelectorAll('#crm-kind button').forEach(function (b) { b.addEventListener('click', function () {
   CRM.kind = b.dataset.k; document.querySelectorAll('#crm-kind button').forEach(function (x) { x.setAttribute('aria-pressed', x === b); }); renderCrm(); }); });
@@ -1627,15 +1867,21 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 6.3';
+var APP_VERSION = 'גרסה 7';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
+document.getElementById('side-version').textContent = APP_VERSION;
 setTimeout(function () {
   if (window.VP_LOCAL) document.getElementById('today-label').textContent += ' · עותק מקומי (' + String(window.VP_LOCAL).slice(0, 60) + ')';
 }, 0);
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7': [
+    ['עיצוב חדש בצבעי MOZ', 'הלוגו, הירוק של המותג והגופן Rubik. במחשב יש תפריט צד קבוע מימין עם כל הדפים, כמו במערכת של MOZ.'],
+    ['לוח בקרה', 'הדף הראשון: מספרים להיום / השבוע / החודש, גרף ביקורים לפי חודש, לוח שנה עם מספר העצירות בכל יום, לקוחות לפי אזור וביקורים אחרונים.'],
+    ['טבלאות וכפתורי סינון', 'כותרות טבלה ירוקות, וכפתורי סינון עם מספרים בפעולות להמשך.']
+  ],
   'גרסה 6.3': [
     ['המפה חזרה', 'רקע המפה עבר למפה של OpenStreetMap, עם רחובות, יישובים וכבישים.'],
     ['מצב יום בכל הדפים', 'האתר בהיר תמיד, גם כשהטלפון במצב כהה. בכפתור הפלטה אפשר לבחור בין "שטח" (צבעוני) ל"מינימל" (מפה אפורה).'],
@@ -1671,7 +1917,7 @@ function showWhatsNew() {
   }).join('') + '</div><div class="sticky-save"><button type="button" class="btn primary big" id="wn-ok">הבנתי</button></div>');
   document.getElementById('wn-ok').addEventListener('click', closeSheet);
 }
-api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; showWhatsNew(); })
+api('getData').then(function (data) { load(data); document.getElementById('loading').hidden = true; show('dash'); showWhatsNew(); })
   .catch(function (err) { document.getElementById('loading').textContent = 'לא הצלחתי לטעון: ' + (err.message || err); });
 </script>
 </body>
