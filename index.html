@@ -36,15 +36,9 @@
   --radius: 16px;
   --nav-h: 64px;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1218; --surface: #161d26; --surface-2: #1d2631; --ink: #e9eef4; --muted: #94a3b8; --line: #263241;
-    --accent: #34c7a2; --accent-strong: #5ad6b6; --accent-ink: #062018; --accent-soft: #143a32; --danger: #ff8a80;
-    --c-black: #9aa4b2;
-    --shadow-sm: 0 1px 2px rgba(0,0,0,.4); --shadow-md: 0 4px 14px rgba(0,0,0,.45); --shadow-lg: 0 12px 32px rgba(0,0,0,.55);
-    color-scheme: dark;
-  }
-}
+:root { color-scheme: light; }
+/* מפה אפורה בעיצוב המינימלי, כדי שרק צבעי הלקוחות יבלטו */
+html[data-skin="mono"] .leaflet-tile-pane { filter: grayscale(1) contrast(.92) brightness(1.04); }
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 html, body { height: 100%; margin: 0; }
 @supports (height: 100dvh) { body { height: 100dvh; } }
@@ -1153,7 +1147,7 @@ function renderCrmProfile() {
   if (crmMap) { crmMap.remove(); crmMap = null; }
   if (b.lat != null) {
     crmMap = L.map('crm-map', { zoomControl: false, attributionControl: false, dragging: true, scrollWheelZoom: false }).setView([b.lat, b.lng], b.approx ? 12 : 15);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/' + SKINS[currentSkin()].tiles + '/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd' }).addTo(crmMap);
+    tileLayer().addTo(crmMap);
     L.circleMarker([b.lat, b.lng], { radius: 10, color: '#fff', weight: 3, fillColor: COLORS[b.color].hex, fillOpacity: 1 }).addTo(crmMap);
   }
 }
@@ -1319,32 +1313,33 @@ var SKINS = {
     prev: 'background:#e9eef0', bar: '#ffffff', top: '#ffffff', acc: '#0b7a64' },
   mono: { name: 'ב · מינימל', desc: 'שחור-לבן נקי ומפה אפורה, כך שרק צבעי הלקוחות בולטים. בהשראת Map My Customers ואפליקציות כמו Linear.', tiles: 'light_all',
     prev: 'background:#f2f2f2', bar: '#ffffff', top: '#ffffff', acc: '#09090b' },
-  night: { name: 'ג · לילה', desc: 'כהה עם ניגודיות גבוהה, נוח לעיניים בנהיגה ובשמש. בהשראת SPOTIO ומסכי ניווט.', tiles: 'dark_all',
-    prev: 'background:#0d141b', bar: '#121a23', top: '#121a23', acc: '#3ee6a8' }
 };
+// מפת OpenStreetMap הרגילה. CARTO התחילה לדרוש מפתח ומציגה "API KEY REQUIRED"
+var TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+function tileLayer() { return L.tileLayer(TILE_URL, { maxZoom: 19, attribution: '© OpenStreetMap' }); }
 var tiles;
 function currentSkin() {
-  var k = 'night';
+  var k = 'field';
   try {
-    // בחרת בעיצוב SPOTIO (לילה): מעבירים אליו פעם אחת גם מכשירים ששמרו בחירה ישנה
-    if (localStorage.getItem('vp-skin-reset') !== '1') { localStorage.setItem('vp-skin', 'night'); localStorage.setItem('vp-skin-reset', '1'); }
-    k = localStorage.getItem('vp-skin') || 'night';
+    // מצב יום בכל הדפים: מעבירים פעם אחת כל מכשיר לעיצוב "שטח" הבהיר
+    if (localStorage.getItem('vp-skin-reset2') !== '1') { localStorage.setItem('vp-skin', 'field'); localStorage.setItem('vp-skin-reset2', '1'); }
+    k = localStorage.getItem('vp-skin') || 'field';
   } catch (e) {}
-  return SKINS[k] ? k : 'night';
+  return SKINS[k] ? k : 'field';
 }
 function applySkin(k) {
   document.documentElement.dataset.skin = k;
   try { localStorage.setItem('vp-skin', k); } catch (e) {}
   if (map) {
     if (tiles) map.removeLayer(tiles);
-    tiles = L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/' + SKINS[k].tiles + '/{z}/{x}/{y}{r}.png', { maxZoom: 20, subdomains: 'abcd', attribution: '© OpenStreetMap © CARTO' }).addTo(map);
+    tiles = tileLayer().addTo(map);
     tiles.bringToBack();
   }
 }
 function openSkins() {
   var cur = currentSkin();
   var dots = [['#22a05a', 30, 40], ['#f07c1e', 55, 28], ['#2f6fe4', 44, 62], ['#eab308', 70, 52], ['#f07c1e', 22, 70]];
-  var html = '<p class="meta" style="margin-top:0">שלוש גרסאות עיצוב. אפשר לעבור ביניהן מתי שרוצים, והבחירה נשמרת במכשיר הזה.</p><div class="skin-list">'
+  var html = '<p class="meta" style="margin-top:0">שתי גרסאות עיצוב בהירות. אפשר לעבור ביניהן מתי שרוצים, והבחירה נשמרת במכשיר הזה.</p><div class="skin-list">'
     + Object.keys(SKINS).map(function (k) {
       var sk = SKINS[k];
       return '<button type="button" class="skin-opt" data-skin="' + k + '" aria-pressed="' + (k === cur) + '"><span class="skin-prev" style="' + sk.prev + '"><u style="background:' + sk.top + '"></u>'
@@ -1632,7 +1627,7 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 6.2';
+var APP_VERSION = 'גרסה 6.3';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 setTimeout(function () {
@@ -1641,6 +1636,11 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 6.3': [
+    ['המפה חזרה', 'רקע המפה עבר למפה של OpenStreetMap, עם רחובות, יישובים וכבישים.'],
+    ['מצב יום בכל הדפים', 'האתר בהיר תמיד, גם כשהטלפון במצב כהה. בכפתור הפלטה אפשר לבחור בין "שטח" (צבעוני) ל"מינימל" (מפה אפורה).'],
+    ['כל הדפים מכל מקום', 'כפתור ☰ בראש האתר פותח את כל הדפים.']
+  ],
   'גרסה 6.2': [
     ['כל הדפים מכל מקום', 'כפתור ☰ בראש האתר פותח את כל הדפים: מפה, לקוחות, בניית קו, בדרך, פעולות להמשך, סיכום ושבוע, כל הנתונים.'],
     ['עיצוב לילה (SPOTIO)', 'האתר עבר לעיצוב הכהה שבחרת. אפשר להחליף בכל רגע בכפתור הפלטה ליד "+ עסק".'],
