@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<base target="_top">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>מתכנן ביקורים</title>
+<style>
+  body { margin: 0; font-family: system-ui, -apple-system, "Segoe UI", Arial, sans-serif; background: #f3f5f7; color: #0f1b2d; }
+  #boot { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; padding: 24px; text-align: center; }
+  #boot button { border: 0; background: #0b7a64; color: #fff; font: inherit; font-weight: 700; border-radius: 12px; height: 44px; padding: 0 20px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="boot"><div id="boot-msg">טוען את מתכנן הביקורים…</div></div>
+<script>
+/*
+ * מטעין קטן: מוריד את המסכים העדכניים מ-GitHub ישירות בדפדפן ומציג אותם.
+ * ככה כל עדכון ש-Claude מעלה ל-GitHub מגיע לאתר אחרי רענון, בלי הדבקות ובלי הרשאות מיוחדות מגוגל.
+ */
+(function () {
+  var URL = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/index.html?t=' + Date.now();
+  function fail(why) {
+    document.getElementById('boot').innerHTML = '<div>לא הצלחתי לטעון את האתר מ-GitHub.</div><div style="color:#64748b;font-size:14px"></div><button type="button" onclick="location.reload()">לנסות שוב</button>';
+    document.querySelector('#boot div:nth-child(2)').textContent = why;
+  }
+  fetch(URL, { cache: 'no-store' }).then(function (r) {
+    if (!r.ok) throw new Error('GitHub ענה ' + r.status);
+    return r.text();
+  }).then(function (html) {
+    if (html.indexOf('google.script.run') < 0) throw new Error('הקובץ שהתקבל לא נראה כמו האתר');
+    window.VP_LOCAL = null; // נטען מ-GitHub, לא מעותק מקומי
+    document.open();
+    document.write(html);
+    document.close();
+  }).catch(function (e) { fail(e.message || String(e)); });
+})();
+</script>
+</body>
+</html>
