@@ -354,7 +354,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 4;
+var CODE_VERSION = 5;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {
@@ -363,12 +363,14 @@ function setupAutoUpdate() {
   });
   ScriptApp.newTrigger('autoUpdate_').timeBased().everyHours(1).create();
   var msg = updateNow_(true, true);
+  console.log(msg);
   try { SpreadsheetApp.getUi().alert('העדכון האוטומטי פועל.\nמעכשיו האתר מתעדכן לבד פעם בשעה.\n\n' + msg); } catch (e) {}
   return msg;
 }
 
 function updateNow() {
   var msg = updateNow_(true);
+  console.log(msg);
   try { SpreadsheetApp.getUi().alert(msg); } catch (e) {}
   return msg;
 }
