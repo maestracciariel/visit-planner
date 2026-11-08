@@ -42,6 +42,7 @@ function loadScreens_() {
 function doGet() {
   return loadScreens_()
     .setTitle('מתכנן ביקורים')
+    .setFaviconUrl('https://raw.githubusercontent.com/maestracciariel/visit-planner/main/assets/favicon.png')
     .addMetaTag('viewport', 'width=device-width, initial-scale=1, viewport-fit=cover')
     .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
 }
@@ -354,7 +355,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 5;
+var CODE_VERSION = 6;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {
