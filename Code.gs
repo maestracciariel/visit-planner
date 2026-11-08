@@ -13,8 +13,8 @@ var SHEETS = {
 
 var BIZ_COLS = ['id', 'שם העסק', 'סוג', 'סטטוס', 'אזור', 'איש קשר', 'טלפון', 'כתובת', 'הערה', 'מה לוקח', 'lat', 'lng', 'מיקום משוער', 'נוצר',
   'אימייל', 'שעות פתיחה', 'אתר / אינסטגרם', 'שם חברה / ח.פ'];
-var VISIT_COLS = ['id', 'תאריך', 'businessId', 'שם העסק', 'תוצאה', 'כפתורים', 'מה נאמר', 'פעולת המשך', 'תאריך המשך', 'התעניינות', 'המשך פתוח', 'נוצר'];
-var ROUTE_COLS = ['תאריך', 'עצירות', 'נקודת התחלה'];
+var VISIT_COLS = ['id', 'תאריך', 'businessId', 'שם העסק', 'תוצאה', 'כפתורים', 'מה נאמר', 'פעולת המשך', 'תאריך המשך', 'התעניינות', 'המשך פתוח', 'נוצר', 'מי ביקר'];
+var ROUTE_COLS = ['תאריך', 'עצירות', 'נקודת התחלה', 'כותרת', 'של מי'];
 var RESULT_HE = { prep: 'הכנה לפגישה', note: 'הערה', done: 'ביקרתי', owner_absent: 'הבעלים לא היה', closed_door: 'היה סגור', phone: 'שיחת טלפון', cancelled: 'בוטל' };
 function resultCode_(he) { for (var k in RESULT_HE) if (RESULT_HE[k] === he) return k; return he; }
 
@@ -142,6 +142,8 @@ function ensureColumns_(name, cols) {
 /** כל הנתונים שהאתר צריך, בקריאה אחת */
 function getData() {
   ensureColumns_(SHEETS.biz, BIZ_COLS);
+  ensureColumns_(SHEETS.visits, VISIT_COLS);
+  ensureColumns_(SHEETS.routes, ROUTE_COLS);
   var settings = {};
   readTable_(SHEETS.settings).forEach(function (r) { settings[r['הגדרה']] = r['ערך']; });
   return {
@@ -160,11 +162,11 @@ function getData() {
         id: r.id, date: r['תאריך'], businessId: r.businessId, result: resultCode_(r['תוצאה']),
         chips: r['כפתורים'] ? String(r['כפתורים']).split(' | ') : [],
         text: r['מה נאמר'], followup: r['פעולת המשך'], followupDate: r['תאריך המשך'],
-        interest: r['התעניינות'], followupOpen: r['המשך פתוח'] === 'כן'
+        interest: r['התעניינות'], followupOpen: r['המשך פתוח'] === 'כן', who: r['מי ביקר'] || ''
       };
     }),
     routes: readTable_(SHEETS.routes).map(function (r) {
-      return { date: r['תאריך'], stops: r['עצירות'] ? String(r['עצירות']).split(',') : [], start: r['נקודת התחלה'] };
+      return { date: r['תאריך'], stops: r['עצירות'] ? String(r['עצירות']).split(',') : [], start: r['נקודת התחלה'], title: r['כותרת'] || '', owner: r['של מי'] || '' };
     }),
     settings: settings
   };
@@ -178,7 +180,7 @@ function saveVisit(v) {
     id: v.id || newId_('v'), 'תאריך': v.date, businessId: v.businessId, 'שם העסק': biz ? biz['שם העסק'] : '',
     'תוצאה': RESULT_HE[v.result] || v.result, 'כפתורים': (v.chips || []).join(' | '), 'מה נאמר': v.text || '',
     'פעולת המשך': v.followup || '', 'תאריך המשך': v.followupDate || '', 'התעניינות': v.interest || '',
-    'המשך פתוח': v.followup ? 'כן' : 'לא', 'נוצר': new Date()
+    'המשך פתוח': v.followup ? 'כן' : 'לא', 'נוצר': new Date(), 'מי ביקר': v.who || ''
   };
   upsert_(SHEETS.visits, VISIT_COLS, 'id', row);
   if (v.newStatus && biz) {
@@ -226,8 +228,9 @@ function saveBusiness(b) {
   return getData();
 }
 
-function saveRoute(date, stops, start) {
-  upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', { 'תאריך': date, 'עצירות': stops.join(','), 'נקודת התחלה': start || '' });
+function saveRoute(date, stops, start, title, owner) {
+  ensureColumns_(SHEETS.routes, ROUTE_COLS);
+  upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', { 'תאריך': date, 'עצירות': stops.join(','), 'נקודת התחלה': start || '', 'כותרת': title || '', 'של מי': owner || '' });
   return getData();
 }
 
@@ -355,7 +358,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 6;
+var CODE_VERSION = 7;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {

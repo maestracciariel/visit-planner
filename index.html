@@ -277,7 +277,7 @@ h3 { font-size: 13px; margin: 26px 0 10px; color: var(--muted); font-weight: 700
 .data-search { flex: 1 1 100%; }
 .data-search input { width: 100%; height: 52px !important; padding-inline: 46px 16px !important; font-size: 16px; }
 
-#view-follow > *, #view-summary > * { max-width: 1400px; }
+#view-follow > *, #view-summary > *, #sum-rmonth > * { max-width: 1400px; }
 /* דף לקוחות (CRM) */
 .crm-grid { display: grid; gap: 16px; }
 @media (min-width: 900px) {
@@ -450,6 +450,23 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--
 .add-new strong { display: block; }
 .search-results .add-new { margin: 8px; width: calc(100% - 16px); }
 .danger-btn { color: var(--c-red); }
+.route-meta { display: flex; gap: 12px; flex-wrap: wrap; align-items: flex-end; margin-bottom: 12px; }
+.route-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
+.route-head strong { font-size: 17px; color: var(--accent); }
+.route-tag { display: flex; flex-direction: column; align-items: flex-start; gap: 1px; width: 100%; border: 0; background: var(--accent-soft); color: var(--ink); border-radius: 8px; padding: 5px 8px; margin-bottom: 4px; cursor: pointer; font: inherit; text-align: start; box-shadow: inset -3px 0 0 var(--accent); }
+.route-tag strong { font-size: 13px; color: var(--accent-strong); }
+.route-tag span { font-size: 11.5px; color: var(--muted); }
+table.data.week tr.wk-titles td { background: var(--surface-2); }
+.rm-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+.rm-grid .dow { text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; padding-bottom: 4px; }
+.rm-day { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; min-height: 110px; min-width: 0; font-size: 12.5px; }
+.rm-day.out { opacity: .45; }
+.rm-day.today { border-color: var(--accent-mid); background: var(--accent-soft); }
+.rm-dn { font-weight: 700; margin-bottom: 4px; }
+.rm-day .wk-stop { font-size: 12px; font-weight: 500; overflow: hidden; }
+.rm-day .wk-stop span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rm-stops { display: grid; gap: 2px; margin-top: 6px; }
+.rm-today { box-shadow: var(--shadow-sm), inset -3px 0 0 var(--accent); }
 /* לוח בקרה */
 #view-dash > * { max-width: 1400px; }
 .kpis-dash { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
@@ -558,6 +575,10 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--
       <input type="date" id="plan-date" aria-label="תאריך">
       <span class="meta" id="plan-count"></span>
     </div>
+    <div class="route-meta">
+      <div class="field" style="margin:0;flex:1 1 220px"><label for="plan-title">כותרת הקו</label><input id="plan-title" placeholder="תתמלא לבד לפי האזור"></div>
+      <div class="field" style="margin:0"><label>של מי הקו</label><div class="chips-row" id="plan-owner"></div></div>
+    </div>
     <div class="list" id="plan-stops"></div>
     <div class="summary-line" id="plan-summary"></div>
     <div class="btns">
@@ -643,6 +664,7 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--
     <div class="seg" role="group" aria-label="תצוגה" id="sum-tab">
       <button type="button" data-t="month" aria-pressed="true">סיכום חודשי</button>
       <button type="button" data-t="week" aria-pressed="false">תצוגה שבועית</button>
+      <button type="button" data-t="rmonth" aria-pressed="false">תצוגה חודשית</button>
     </div>
     <div id="sum-month">
       <div class="toolbar"><select id="sum-month-sel" aria-label="חודש"></select></div>
@@ -650,9 +672,20 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--
       <div class="sum-cols">
         <div class="card"><div class="chart-title">ביקורים לפי אזור</div><div id="sum-regions"></div></div>
         <div class="card"><div class="chart-title">מה היה בביקורים</div><div id="sum-results"></div></div>
+        <div class="card"><div class="chart-title">ביקורים לפי מי ביקר</div><div id="sum-who"></div></div>
       </div>
       <h3>לקוחות פעילים שעוד לא ביקרתי החודש</h3>
       <div class="list" id="sum-missing"></div>
+    </div>
+    <div id="sum-rmonth" hidden>
+      <div class="toolbar">
+        <button class="btn small" type="button" id="rm-prev" aria-label="חודש קודם">→ חודש קודם</button>
+        <strong id="rm-label"></strong>
+        <button class="btn small" type="button" id="rm-next" aria-label="חודש הבא">חודש הבא ←</button>
+        <button class="btn small" type="button" id="rm-today">החודש</button>
+      </div>
+      <div id="rm-body"></div>
+      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. לחיצה על כותרת הקו פותחת את בניית הקו, ולחיצה על עסק פותחת את הכרטיס שלו.</div>
     </div>
     <div id="sum-week" hidden>
       <div class="toolbar">
@@ -719,7 +752,19 @@ function api(fn) {
 /* ===== מצב ===== */
 var S = { businesses: [], visits: [], routes: [], settings: {} };
 var byId = {};
-var plan = { date: '', stops: [], km: null, minutes: null };
+var plan = { date: '', stops: [], km: null, minutes: null, title: '', owner: '' };
+/* צוות: מי ביקר / של מי הקו. אפשר לשנות בגיליון "הגדרות" בשורה "אנשי צוות" (שמות מופרדים בפסיק) */
+function team() { var t = String(S.settings['אנשי צוות'] || '').split(',').map(function (x) { return x.trim(); }).filter(Boolean); return t.length ? t : ['אריאל', 'אפרת']; }
+function me() { try { return localStorage.getItem('vp-who') || ''; } catch (e) { return ''; } }
+function setMe(n) { try { if (n) localStorage.setItem('vp-who', n); } catch (e) {} }
+/* כותרת הקו: מה שנכתב בבניית קו, אחרת "אזור X" לפי האזור של רוב העצירות */
+function routeRegion(stops) {
+  var c = {}; stops.forEach(function (id) { var b = byId[id]; if (b && b.region) c[b.region] = (c[b.region] || 0) + 1; });
+  var top = Object.keys(c).sort(function (a, b) { return c[b] - c[a]; })[0];
+  return top ? 'אזור ' + top : '';
+}
+function routeTitle(r) { if (!r) return ''; var st = r.stops.filter(function (id) { return byId[id]; }); return r.title || routeRegion(st) || 'קו'; }
+function getRoute(d) { return S.routes.filter(function (x) { return x.date === d; })[0]; }
 var COLORS = {
   green: { label: 'ביקרתי החודש', css: 'var(--c-green)', hex: '#22a05a' },
   yellow: { label: 'לא ביקרתי מעל חודש', css: 'var(--c-yellow)', hex: '#eab308' },
@@ -925,6 +970,9 @@ function setPlanDate(d) {
   plan.date = d;
   var r = S.routes.filter(function (x) { return x.date === d; })[0];
   plan.stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
+  plan.title = r ? (r.title || '') : '';
+  plan.owner = r ? (r.owner || '') : me();
+  document.getElementById('plan-title').value = plan.title;
   plan.km = plan.minutes = null;
   document.getElementById('plan-date').value = d;
   renderPlan();
@@ -938,6 +986,10 @@ function dateChips(elId, current, pick) {
 function savedRoute(d) { var r = S.routes.filter(function (x) { return x.date === d; })[0]; return r && r.stops.filter(function (id) { return byId[id]; }).length ? r : null; }
 function renderPlan() {
   dateChips('plan-chips', plan.date, function (d) { setPlanDate(d); });
+  document.getElementById('plan-title').placeholder = routeRegion(plan.stops) || 'למשל: אזור מרכז';
+  var ow = document.getElementById('plan-owner');
+  ow.innerHTML = team().map(function (n) { return '<button type="button" class="fchip" data-n="' + h(n) + '" aria-pressed="' + (plan.owner === n) + '">' + h(n) + '</button>'; }).join('');
+  ow.querySelectorAll('.fchip').forEach(function (b) { b.onclick = function () { plan.owner = plan.owner === b.dataset.n ? '' : b.dataset.n; renderPlan(); }; });
   document.getElementById('plan-manage').hidden = !savedRoute(plan.date);
   var delBtn = document.getElementById('btn-del-route'); delBtn.dataset.sure = ''; delBtn.textContent = 'מחיקת הקו';
   document.getElementById('plan-count').textContent = plan.stops.length + ' עצירות · ' + fmtDate(plan.date);
@@ -1018,7 +1070,8 @@ function renderToday() {
   var el = document.getElementById('today-list');
   if (!stops.length) { el.innerHTML = '<div class="card empty">אין קו שמור ל' + fmtDate(d) + '. בנה אותו במסך "בניית קו".</div>'; return; }
   var links = routeLinks(stops).map(function (l) { return '<a class="btn" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>'; }).join('');
-  el.innerHTML = '<div class="btns" style="margin-top:0">' + links + '</div>' + stops.map(function (id, i) {
+  el.innerHTML = '<div class="route-head"><strong>' + h(routeTitle(r)) + '</strong><span class="meta">' + stops.length + ' עצירות' + (r.owner ? ' · ' + h(r.owner) : '') + '</span></div>'
+    + '<div class="btns" style="margin-top:0">' + links + '</div>' + stops.map(function (id, i) {
     var b = byId[id];
     var todayV = b.visits.filter(function (v) { return v.date === d; })[0];
     var html = '<div class="card"><div class="row"><span class="stop-n" style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + '</div></div>'
@@ -1094,6 +1147,8 @@ function openSummary(id, visitId, backToCard) {
   v = v || { result: 'done', chips: [], text: '', followup: '', followupDate: '', interest: '' };
   if (v.date) d = v.date;
   var html = '<div class="meta" style="margin-bottom:14px">' + fmtDate(d) + (b.lastNote && b.lastNote.id !== v.id ? ' · בפעם הקודמת: ' + h(b.lastNote.text) : '') + '</div>'
+    + '<div class="field"><label>מי ביקר</label><div class="toggle-group" data-group="who">'
+    + team().map(function (n) { return '<button type="button" class="toggle" data-val="' + h(n) + '" aria-pressed="' + ((v.who || (v.id ? '' : me())) === n) + '">' + h(n) + '</button>'; }).join('') + '</div></div>'
     + '<div class="field"><label>מה היה</label><div class="toggle-group" data-group="result">'
     + ['done', 'owner_absent', 'closed_door', 'phone', 'note'].map(function (k) { return '<button type="button" class="toggle" data-val="' + k + '" aria-pressed="' + (v.result === k) + '">' + RESULT[k] + '</button>'; }).join('') + '</div></div>'
     + '<div class="field"><label>במה מדובר (אפשר כמה)</label><div class="toggle-group" data-group="chips" data-multi="1">'
@@ -1130,13 +1185,14 @@ function openSummary(id, visitId, backToCard) {
   });
   function pick(name) { var t = body.querySelector('[data-group="' + name + '"] [aria-pressed="true"]'); return t ? t.dataset.val : ''; }
   document.getElementById('s-save').addEventListener('click', function () {
+    setMe(pick('who'));
     var btn = this; btn.disabled = true; btn.textContent = 'שומר…';
     var payload = {
       id: v.id, businessId: id, date: d, result: pick('result') || 'done',
       chips: Array.prototype.map.call(body.querySelectorAll('[data-group="chips"] [aria-pressed="true"]'), function (x) { return x.dataset.val; }),
       text: document.getElementById('s-text').value.trim(), interest: pick('interest'),
       followup: document.getElementById('s-follow').value.trim(), followupDate: document.getElementById('s-fdate').value,
-      newStatus: pick('newStatus')
+      newStatus: pick('newStatus'), who: pick('who')
     };
     api('saveVisit', payload).then(function (data) { load(data); if (backToCard) openCard(id); else closeSheet(); toast('הסיכום נשמר'); })
       .catch(function (err) { btn.disabled = false; btn.textContent = 'שמירה'; toast('לא נשמר: ' + (err.message || err)); });
@@ -1189,7 +1245,7 @@ var BIZ_COLS_UI = [
   ['note', 'אחרי הפגישה האחרונה'], ['prep', 'הכנה לפגישה הבאה'], ['important', 'חשוב לזכור'], ['interest', 'התעניינות'], ['takes', 'מה לוקח'], ['hours', 'שעות פתיחה']
 ];
 var VISIT_COLS_UI = [
-  ['bizName', 'שם העסק'], ['date', 'תאריך'], ['result', 'מה היה'], ['chips', 'פרטים'], ['text', 'מה נאמר'],
+  ['bizName', 'שם העסק'], ['date', 'תאריך'], ['who', 'מי ביקר'], ['result', 'מה היה'], ['chips', 'פרטים'], ['text', 'מה נאמר'],
   ['followup', 'פעולת המשך'], ['followupDate', 'תאריך המשך'], ['interest', 'התעניינות'], ['openText', 'מצב המשך']
 ];
 function renderDataFilters() {
@@ -1212,7 +1268,7 @@ function renderData() {
       var b = byId[v.businessId];
       return { b: b, color: b.color, region: b.region || '', bizName: b.name, date: v.date, result: RESULT[v.result] || v.result || '', chips: (v.chips || []).join(', '),
         text: v.text || '', followup: v.followup || '', followupDate: v.followupDate || '', interest: v.interest || '',
-        openText: v.followup ? (v.followupOpen ? 'פתוח' : 'בוצע') : '' };
+        openText: v.followup ? (v.followupOpen ? 'פתוח' : 'בוצע') : '', who: v.who || '' };
     });
   }
   var total = rows.length;
@@ -1351,7 +1407,7 @@ function renderFollow() {
   var lab = { all: 'הכול', open: 'פתוחות', late: 'באיחור', done: 'בוצעו' };
   document.querySelectorAll('#follow-tab .fchip').forEach(function (b) { b.textContent = lab[b.dataset.f] + ' (' + cnt[b.dataset.f] + ')'; });
   document.getElementById('follow-count').textContent = rows.length + ' פעולות' + (lateCount ? ' · ' + lateCount + ' באיחור' : '') + ' · לחיצה על שורה פותחת את כרטיס העסק';
-  var head = '<thead><tr><th>שם העסק</th><th>ימים לדדליין</th><th>תאריך המשך</th><th>פעולת המשך</th><th>מה נאמר בביקור</th><th>תאריך הביקור</th><th>סוג</th><th>טלפון</th><th>מצב</th></tr></thead>';
+  var head = '<thead><tr><th>שם העסק</th><th>ימים לדדליין</th><th>תאריך המשך</th><th>פעולת המשך</th><th>מה נאמר בביקור</th><th>תאריך הביקור</th><th>מי ביקר</th><th>סוג</th><th>טלפון</th><th>מצב</th></tr></thead>';
   var body = rows.map(function (r) {
     var badge = !r.v.followupOpen ? '<span class="dl-badge done">בוצע</span>'
       : r.days === null ? '<span class="dl-badge ok">בלי תאריך</span>'
@@ -1361,12 +1417,12 @@ function renderFollow() {
     return '<tr data-id="' + r.b.id + '"><td><span class="cell-name"><span class="dot ' + r.b.color + '"></span>' + h(r.b.name) + '</span></td>'
       + '<td>' + badge + '</td><td>' + (r.v.followupDate ? fmtDate(r.v.followupDate).replace('יום ', '') : '') + '</td>'
       + '<td class="wrap">' + h(r.v.followup) + '</td><td class="wrap">' + h(r.v.text || '') + '</td>'
-      + '<td>' + fmtDate(r.v.date).replace('יום ', '') + '</td><td>' + (r.b.kind === 'lead' ? 'עסק חדש' : 'לקוח קיים') + '</td>'
+      + '<td>' + fmtDate(r.v.date).replace('יום ', '') + '</td><td>' + h(r.v.who || '') + '</td><td>' + (r.b.kind === 'lead' ? 'עסק חדש' : 'לקוח קיים') + '</td>'
       + '<td><span dir="ltr">' + h(r.b.phone || '') + '</span></td>'
       + '<td>' + (r.v.followupOpen ? '<button class="btn small primary" data-close="' + r.v.id + '" type="button">בוצע ✓</button>' : '') + '</td></tr>';
   }).join('');
   var tb = document.getElementById('follow-table');
-  tb.innerHTML = head + '<tbody>' + (body || '<tr><td colspan="9" class="empty">אין פעולות כאן.</td></tr>') + '</tbody>';
+  tb.innerHTML = head + '<tbody>' + (body || '<tr><td colspan="10" class="empty">אין פעולות כאן.</td></tr>') + '</tbody>';
   tb.querySelectorAll('tbody tr[data-id]').forEach(function (tr) {
     tr.onclick = function (e) {
       var c = e.target.closest('[data-close]');
@@ -1390,7 +1446,9 @@ function hbars(pairs, total) {
 function renderSummary() {
   document.getElementById('sum-month').hidden = SUMTAB !== 'month';
   document.getElementById('sum-week').hidden = SUMTAB !== 'week';
+  document.getElementById('sum-rmonth').hidden = SUMTAB !== 'rmonth';
   if (SUMTAB === 'week') return renderWeek();
+  if (SUMTAB === 'rmonth') return renderRouteMonth();
   var sel = document.getElementById('sum-month-sel');
   var months = {}; months[todayIso().slice(0, 7)] = 1;
   S.visits.forEach(function (v) { if (v.date) months[v.date.slice(0, 7)] = 1; });
@@ -1421,6 +1479,8 @@ function renderSummary() {
   var reg = {}; real.forEach(function (v) { var r = (byId[v.businessId] || {}).region || 'בלי אזור'; reg[r] = (reg[r] || 0) + 1; });
   document.getElementById('sum-regions').innerHTML = hbars(Object.keys(reg).map(function (k) { return [k, reg[k]]; }).sort(function (a, b) { return b[1] - a[1]; }));
   var res = {}; real.forEach(function (v) { var r = RESULT[v.result] || v.result; res[r] = (res[r] || 0) + 1; });
+  var who = {}; real.forEach(function (v) { var w = v.who || 'לא צוין'; who[w] = (who[w] || 0) + 1; });
+  document.getElementById('sum-who').innerHTML = hbars(Object.keys(who).map(function (k) { return [k, who[k]]; }).sort(function (a, b) { return b[1] - a[1]; }));
   document.getElementById('sum-results').innerHTML = hbars(Object.keys(res).map(function (k) { return [k, res[k]]; }).sort(function (a, b) { return b[1] - a[1]; }));
   var missing = active.filter(function (b) { return !seen[b.id]; });
   var showN = 12;
@@ -1439,7 +1499,7 @@ function renderWeek() {
     var r = S.routes.filter(function (x) { return x.date === d; })[0];
     var stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
     var extra = S.visits.filter(function (v) { return v.date === d && v.result !== 'prep' && v.result !== 'note' && stops.indexOf(v.businessId) < 0 && byId[v.businessId]; }).map(function (v) { return v.businessId; });
-    return { d: d, stops: stops, extra: extra.filter(function (x, i, a) { return a.indexOf(x) === i; }) };
+    return { d: d, r: r, stops: stops, extra: extra.filter(function (x, i, a) { return a.indexOf(x) === i; }) };
   });
   var rowsN = Math.max.apply(null, cols.map(function (c) { return c.stops.length; }).concat([1]));
   var t = todayIso();
@@ -1449,7 +1509,9 @@ function renderWeek() {
     return '<div class="wk-stop" data-id="' + id + '"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
   };
   var head = '<thead><tr><th>עצירה</th>' + cols.map(function (c, i) { return '<th class="' + (c.d === t ? 'today' : '') + '">' + DAYS_HE[i] + ' ' + Number(c.d.slice(8)) + '/' + Number(c.d.slice(5, 7)) + '</th>'; }).join('') + '</tr></thead>';
-  var body = '';
+  var body = '<tr class="wk-titles"><td class="num">קו</td>' + cols.map(function (c) {
+    return '<td class="' + (c.d === t ? 'today' : '') + '">' + (c.stops.length ? '<button type="button" class="route-tag" data-d="' + c.d + '"><strong>' + h(routeTitle(c.r)) + '</strong><span>' + c.stops.length + ' עצירות' + (c.r.owner ? ' · ' + h(c.r.owner) : '') + '</span></button>' : '') + '</td>';
+  }).join('') + '</tr>';
   for (var i = 0; i < rowsN; i++) {
     body += '<tr><td class="num">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td class="' + (c.d === t ? 'today' : '') + '">' + (c.stops[i] ? cell(c.stops[i], c.d) : '') + '</td>'; }).join('') + '</tr>';
   }
@@ -1463,6 +1525,44 @@ function renderWeek() {
   var tb = document.getElementById('wk-table');
   tb.innerHTML = head + '<tbody>' + body + '</tbody>';
   tb.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
+  tb.querySelectorAll('.route-tag').forEach(function (b) { b.onclick = function () { setPlanDate(b.dataset.d); show('plan'); }; });
+}
+
+/* ===== תצוגה חודשית של הקווים ===== */
+var RMONTH = null;
+function renderRouteMonth() {
+  var t = todayIso();
+  if (!RMONTH) RMONTH = t.slice(0, 7);
+  var y = Number(RMONTH.slice(0, 4)), m = Number(RMONTH.slice(5, 7)) - 1;
+  document.getElementById('rm-label').textContent = MONTHS_HE[m] + ' ' + y;
+  var first = iso(new Date(y, m, 1, 12)), start = addDays(first, -new Date(y, m, 1, 12).getDay());
+  var days = [];
+  for (var i = 0; i < 42; i++) { var d = addDays(start, i); if (i === 35 && d.slice(0, 7) !== RMONTH) break; days.push(d); }
+  var stopHtml = function (id, d) {
+    var b = byId[id], ok = b.visits.some(function (v) { return v.date === d && isReal(v); });
+    return '<div class="wk-stop" data-id="' + id + '"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
+  };
+  var info = function (d) { var r = getRoute(d); var st = r ? r.stops.filter(function (id) { return byId[id]; }) : []; return { r: r, st: st }; };
+  var el = document.getElementById('rm-body');
+  if (window.innerWidth < 760) {
+    var list = days.filter(function (d) { return d.slice(0, 7) === RMONTH && info(d).st.length; });
+    el.innerHTML = list.length ? '<div class="list">' + list.map(function (d) {
+      var x = info(d);
+      return '<div class="card' + (d === t ? ' rm-today' : '') + '"><button type="button" class="route-tag" data-d="' + d + '"><strong>' + fmtDate(d) + ' · ' + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'
+        + '<div class="rm-stops">' + x.st.map(function (id) { return stopHtml(id, d); }).join('') + '</div></div>';
+    }).join('') + '</div>' : '<div class="card empty">אין קווים שמורים בחודש הזה.</div>';
+  } else {
+    el.innerHTML = '<div class="rm-grid">' + ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(function (n) { return '<div class="dow">' + n + '</div>'; }).join('')
+      + days.map(function (d) {
+        var x = info(d), out = d.slice(0, 7) !== RMONTH, MAX = 6;
+        return '<div class="rm-day' + (out ? ' out' : '') + (d === t ? ' today' : '') + '"><div class="rm-dn">' + Number(d.slice(8)) + '</div>'
+          + (x.st.length ? '<button type="button" class="route-tag" data-d="' + d + '"><strong>' + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'
+            + x.st.slice(0, MAX).map(function (id) { return stopHtml(id, d); }).join('') + (x.st.length > MAX ? '<div class="meta">ועוד ' + (x.st.length - MAX) + '</div>' : '') : '')
+          + '</div>';
+      }).join('') + '</div>';
+  }
+  el.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
+  el.querySelectorAll('.route-tag').forEach(function (b) { b.onclick = function () { setPlanDate(b.dataset.d); show('plan'); }; });
 }
 
 /* ===== לוח בקרה ===== */
@@ -1519,11 +1619,11 @@ function renderDash() {
   }).join('');
   // ביקורים אחרונים
   var recent = S.visits.filter(function (v) { return isReal(v) && byId[v.businessId]; }).slice(0, 10);
-  document.getElementById('dash-recent').innerHTML = '<thead><tr><th>עסק</th><th>תאריך</th><th>מה היה</th><th>פעולת המשך</th></tr></thead><tbody>'
+  document.getElementById('dash-recent').innerHTML = '<thead><tr><th>עסק</th><th>תאריך</th><th>מי</th><th>מה היה</th><th>פעולת המשך</th></tr></thead><tbody>'
     + (recent.map(function (v) {
       var b = byId[v.businessId];
-      return '<tr data-id="' + b.id + '"><td><span class="cell-name"><span class="dot ' + b.color + '"></span>' + h(b.name) + '</span></td><td>' + fmtDate(v.date).replace('יום ', '') + '</td><td>' + h(RESULT[v.result] || '') + '</td><td class="wrap">' + h(v.followup || '') + '</td></tr>';
-    }).join('') || '<tr><td colspan="4" class="empty">עוד אין ביקורים.</td></tr>') + '</tbody>';
+      return '<tr data-id="' + b.id + '"><td><span class="cell-name"><span class="dot ' + b.color + '"></span>' + h(b.name) + '</span></td><td>' + fmtDate(v.date).replace('יום ', '') + '</td><td>' + h(v.who || '') + '</td><td>' + h(RESULT[v.result] || '') + '</td><td class="wrap">' + h(v.followup || '') + '</td></tr>';
+    }).join('') || '<tr><td colspan="5" class="empty">עוד אין ביקורים.</td></tr>') + '</tbody>';
   document.querySelectorAll('#dash-recent tbody tr[data-id]').forEach(function (tr) { tr.onclick = function () { openCard(tr.dataset.id); }; });
 }
 function renderCal() {
@@ -1688,6 +1788,7 @@ function cardHtml(id) {
   else html += '<div class="timeline">' + b.visits.map(function (v) {
     return '<div class="tl-item"><div class="tl-top"><span class="tl-date">' + fmtDate(v.date) + '</span>'
       + '<span class="pill">' + h(RESULT[v.result] || v.result || '') + '</span>'
+      + (v.who ? '<span class="pill">👤 ' + h(v.who) + '</span>' : '')
       + (v.interest ? '<span class="pill">' + h({ 'חם': '🔥 חם', 'פושר': '🙂 פושר', 'קר': '❄️ קר' }[v.interest] || v.interest) + '</span>' : '')
       + '<span style="flex:1"></span><button class="btn small" data-act="edit-visit" data-id="' + b.id + '" data-v="' + v.id + '">עריכה</button></div>'
       + (v.chips && v.chips.length ? '<div class="tl-chips">' + v.chips.map(function (c) { return '<span>' + h(c) + '</span>'; }).join('') + '</div>' : '')
@@ -1704,7 +1805,7 @@ function bindCard(root, id, refresh) {
     var text = root.querySelector('.prep-text').value.trim();
     if (!text) { toast('כתוב משהו קודם'); return; }
     var btn = this; btn.disabled = true;
-    api('saveVisit', { businessId: id, date: nextPlannedDate(id), result: 'prep', chips: [], text: text, followup: '', followupDate: '', interest: '' })
+    api('saveVisit', { businessId: id, date: nextPlannedDate(id), result: 'prep', chips: [], text: text, followup: '', followupDate: '', interest: '', who: me() })
       .then(function (data) { load(data); refresh(); toast('נקודות ההכנה נשמרו'); })
       .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
   });
@@ -1712,7 +1813,7 @@ function bindCard(root, id, refresh) {
     var text = root.querySelector('.qn-text').value.trim();
     if (!text) { toast('כתוב משהו קודם'); return; }
     var btn = this; btn.disabled = true;
-    api('saveVisit', { businessId: id, date: todayIso(), result: 'note', chips: [], text: text, followup: '', followupDate: '', interest: '' })
+    api('saveVisit', { businessId: id, date: todayIso(), result: 'note', chips: [], text: text, followup: '', followupDate: '', interest: '', who: me() })
       .then(function (data) { load(data); refresh(); toast('ההערה נשמרה'); })
       .catch(function (err) { btn.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
   });
@@ -1851,6 +1952,9 @@ document.querySelectorAll('#sum-tab button').forEach(function (b) { b.addEventLi
 document.getElementById('sum-month-sel').addEventListener('change', renderSummary);
 document.getElementById('wk-prev').addEventListener('click', function () { WEEK0 = addDays(WEEK0, -7); renderWeek(); });
 document.getElementById('wk-next').addEventListener('click', function () { WEEK0 = addDays(WEEK0, 7); renderWeek(); });
+document.getElementById('rm-prev').addEventListener('click', function () { var y = Number(RMONTH.slice(0, 4)), m = Number(RMONTH.slice(5, 7)) - 2; RMONTH = iso(new Date(y, m, 15)).slice(0, 7); renderRouteMonth(); });
+document.getElementById('rm-next').addEventListener('click', function () { var y = Number(RMONTH.slice(0, 4)), m = Number(RMONTH.slice(5, 7)); RMONTH = iso(new Date(y, m, 15)).slice(0, 7); renderRouteMonth(); });
+document.getElementById('rm-today').addEventListener('click', function () { RMONTH = todayIso().slice(0, 7); renderRouteMonth(); });
 document.getElementById('wk-today').addEventListener('click', function () { WEEK0 = weekStart(todayIso()); renderWeek(); });
 document.getElementById('data-q').addEventListener('input', renderData);
 document.getElementById('data-region').addEventListener('change', renderData);
@@ -1920,7 +2024,8 @@ function openMoveRoute() {
     var there = savedRoute(to), merged = (there ? there.stops.filter(function (id) { return byId[id]; }) : []).concat(stops.filter(function (id) { return !there || there.stops.indexOf(id) < 0; }));
     go.disabled = true; go.textContent = 'מעביר…';
     var start = S.settings['כתובת יציאה'] || '';
-    api('saveRoute', to, merged, start).then(function () { return api('saveRoute', from, [], start); })
+    var fromR = getRoute(from) || {}, toR = there || {};
+    api('saveRoute', to, merged, start, toR.title || fromR.title || '', toR.owner || fromR.owner || '').then(function () { return api('saveRoute', from, [], start, '', ''); })
       .then(function (d) { load(d); closeSheet(); setPlanDate(to); toast('הקו הועבר ל' + fmtDate(to)); })
       .catch(function (err) { go.disabled = false; go.textContent = 'העבר את הקו'; toast('לא הועבר: ' + (err.message || err)); });
   });
@@ -1930,16 +2035,17 @@ document.getElementById('btn-del-route').addEventListener('click', function () {
   var btn = this;
   if (!btn.dataset.sure) { btn.dataset.sure = '1'; btn.textContent = 'לחץ שוב למחיקה'; return; }
   btn.disabled = true;
-  api('saveRoute', plan.date, [], S.settings['כתובת יציאה'] || '').then(function (d) { load(d); setPlanDate(plan.date); toast('הקו של ' + fmtDate(plan.date) + ' נמחק'); })
+  api('saveRoute', plan.date, [], S.settings['כתובת יציאה'] || '', '', '').then(function (d) { load(d); setPlanDate(plan.date); toast('הקו של ' + fmtDate(plan.date) + ' נמחק'); })
     .catch(function (err) { toast('לא נמחק: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 document.getElementById('btn-save-route').addEventListener('click', function () {
   var btn = this; btn.disabled = true;
-  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '').then(function (d) { var k = plan.km, m = plan.minutes; load(d); plan.km = k; plan.minutes = m; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); })
+  plan.title = document.getElementById('plan-title').value.trim();
+  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '', plan.title, plan.owner).then(function (d) { var k = plan.km, m = plan.minutes, tt = plan.title, oo = plan.owner; load(d); plan.km = k; plan.minutes = m; plan.title = tt; plan.owner = oo; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); })
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.1';
+var APP_VERSION = 'גרסה 7.2';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
@@ -1949,6 +2055,11 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7.2': [
+    ['מי ביקר', 'בסיכום ביקור בוחרים מי ביקר (אריאל / אפרת). האתר זוכר אותך בכל מכשיר. השם מופיע בהיסטוריה, בטבלאות ובסיכום החודשי.'],
+    ['כותרת לכל קו', 'בבניית קו: "כותרת הקו" (מתמלאת לבד לפי האזור) ו"של מי הקו". הכותרת מופיעה בתצוגה השבועית, בחודשית ובמסך "בדרך".'],
+    ['תצוגה חודשית של הקווים', 'עוד ← סיכום ושבוע ← "תצוגה חודשית": כל החודש במבט אחד, ובכל יום הקו עם הכותרת והעסקים.']
+  ],
   'גרסה 7.1': [
     ['ביטול בחירה בלחיצה שנייה', 'בחלון סיכום הביקור: לחיצה נוספת על חם / פושר / קר, על תאריך ההמשך או על שינוי המצב מבטלת את הבחירה.'],
     ['הוספת עסק מתוך החיפוש', 'מחפשים עסק שלא קיים (במפה, בלקוחות, בבניית קו או בנתונים) ומקבלים כפתור "+ הוסף כעסק חדש" עם השם כבר ממולא.'],
