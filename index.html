@@ -457,6 +457,7 @@ nav.tabs button[aria-selected="true"] { color: var(--accent); background: var(--
 .route-tag strong { font-size: 13px; color: var(--accent-strong); }
 .route-tag span { font-size: 11.5px; color: var(--muted); }
 table.data.week tr.wk-titles td { background: var(--surface-2); }
+table.data.week th.today { background: var(--accent-strong); color: #fff; box-shadow: inset 0 -3px 0 var(--gold); }
 .rm-grid { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
 .rm-grid .dow { text-align: center; color: var(--muted); font-size: 13px; font-weight: 600; padding-bottom: 4px; }
 .rm-day { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 6px; min-height: 110px; min-width: 0; font-size: 12.5px; }
@@ -467,6 +468,13 @@ table.data.week tr.wk-titles td { background: var(--surface-2); }
 .rm-day .wk-stop span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .rm-stops { display: grid; gap: 2px; margin-top: 6px; }
 .rm-today { box-shadow: var(--shadow-sm), inset -3px 0 0 var(--accent); }
+[draggable="true"] { cursor: grab; }
+.dragging { opacity: .45; }
+.drop-hover { outline: 2px dashed var(--accent); outline-offset: -3px; background: var(--accent-soft) !important; }
+.picked { outline: 2px solid var(--brand-orange); outline-offset: 1px; border-radius: 8px; }
+.move-hint { background: #fff4e5; border: 1px solid #f5c98b; color: #7a4a00; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-weight: 600; }
+.move-toggle[aria-pressed="true"] { background: var(--brand-orange); color: #fff; }
+.rm-empty-day { padding: 10px 14px; cursor: pointer; }
 /* לוח בקרה */
 #view-dash > * { max-width: 1400px; }
 .kpis-dash { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
@@ -520,7 +528,7 @@ table.data.week tr.wk-titles td { background: var(--surface-2); }
     <button type="button" data-view="plan"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg><span>בניית קו</span></button>
     <button type="button" data-view="today"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg><span>בדרך</span></button>
     <button type="button" data-view="follow"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg><span>פעולות להמשך</span><span class="sb" id="side-badge" hidden></span></button>
-    <button type="button" data-view="summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>סיכום ושבוע</span></button>
+    <button type="button" data-view="summary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg><span>תצוגה שבועית וחודשית</span></button>
     <button type="button" data-view="data"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg><span>כל הנתונים</span></button>
     <button type="button" data-view="open"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>מה מחכה לי</span></button>
   </nav>
@@ -660,7 +668,7 @@ table.data.week tr.wk-titles td { background: var(--surface-2); }
   </section>
 
   <section class="view" id="view-summary" hidden>
-    <h2>סיכום</h2>
+    <h2>תצוגה שבועית וחודשית</h2>
     <div class="seg" role="group" aria-label="תצוגה" id="sum-tab">
       <button type="button" data-t="month" aria-pressed="true">סיכום חודשי</button>
       <button type="button" data-t="week" aria-pressed="false">תצוגה שבועית</button>
@@ -683,9 +691,11 @@ table.data.week tr.wk-titles td { background: var(--surface-2); }
         <strong id="rm-label"></strong>
         <button class="btn small" type="button" id="rm-next" aria-label="חודש הבא">חודש הבא ←</button>
         <button class="btn small" type="button" id="rm-today">החודש</button>
+        <button class="btn small move-toggle" type="button" id="rm-move" aria-pressed="false">העברה בלחיצות</button>
       </div>
+      <div class="move-hint" hidden></div>
       <div id="rm-body"></div>
-      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. לחיצה על כותרת הקו פותחת את בניית הקו, ולחיצה על עסק פותחת את הכרטיס שלו.</div>
+      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. <b>גוררים</b> כותרת של קו ליום אחר כדי להעביר את כל הקו (אם יש שם קו, הם מחליפים ימים), או שם של עסק כדי להעביר רק אותו. לחיצה על כותרת פותחת את בניית הקו. בטלפון: "העברה בלחיצות".</div>
     </div>
     <div id="sum-week" hidden>
       <div class="toolbar">
@@ -693,9 +703,11 @@ table.data.week tr.wk-titles td { background: var(--surface-2); }
         <strong id="wk-label"></strong>
         <button class="btn small" type="button" id="wk-next" aria-label="שבוע הבא">שבוע הבא ←</button>
         <button class="btn small" type="button" id="wk-today">השבוע</button>
+        <button class="btn small move-toggle" type="button" id="wk-move" aria-pressed="false">העברה בלחיצות</button>
       </div>
+      <div class="move-hint" hidden></div>
       <div class="table-wrap" style="max-height:none"><table class="data week" id="wk-table"></table></div>
-      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. לחיצה על עסק פותחת את הכרטיס.</div>
+      <div class="count-line" style="margin-top:8px">✓ = נרשם סיכום ביקור באותו יום. <b>גוררים</b> כותרת של קו ליום אחר כדי להעביר את כל הקו (אם יש שם קו, הם מחליפים ימים), או שם של עסק כדי להעביר רק אותו. בטלפון: "העברה בלחיצות".</div>
     </div>
   </section>
 
@@ -1503,17 +1515,17 @@ function renderWeek() {
   });
   var rowsN = Math.max.apply(null, cols.map(function (c) { return c.stops.length; }).concat([1]));
   var t = todayIso();
-  var cell = function (id, d) {
+  var cell = function (id, d, inRoute) {
     var b = byId[id];
     var ok = b.visits.some(function (v) { return v.date === d && ['done', 'owner_absent', 'closed_door', 'phone'].indexOf(v.result) >= 0; });
-    return '<div class="wk-stop" data-id="' + id + '"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
+    return '<div class="wk-stop" data-id="' + id + '"' + (inRoute ? ' data-drag-stop="1" data-from="' + d + '" draggable="true"' : '') + '><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
   };
   var head = '<thead><tr><th>עצירה</th>' + cols.map(function (c, i) { return '<th class="' + (c.d === t ? 'today' : '') + '">' + DAYS_HE[i] + ' ' + Number(c.d.slice(8)) + '/' + Number(c.d.slice(5, 7)) + '</th>'; }).join('') + '</tr></thead>';
   var body = '<tr class="wk-titles"><td class="num">קו</td>' + cols.map(function (c) {
-    return '<td class="' + (c.d === t ? 'today' : '') + '">' + (c.stops.length ? '<button type="button" class="route-tag" data-d="' + c.d + '"><strong>' + h(routeTitle(c.r)) + '</strong><span>' + c.stops.length + ' עצירות' + (c.r.owner ? ' · ' + h(c.r.owner) : '') + '</span></button>' : '') + '</td>';
+    return '<td data-drop="' + c.d + '" class="' + (c.d === t ? 'today' : '') + '">' + (c.stops.length ? '<button type="button" class="route-tag" data-d="' + c.d + '" data-drag-route="1" draggable="true"><strong>' + h(routeTitle(c.r)) + '</strong><span>' + c.stops.length + ' עצירות' + (c.r.owner ? ' · ' + h(c.r.owner) : '') + '</span></button>' : '') + '</td>';
   }).join('') + '</tr>';
   for (var i = 0; i < rowsN; i++) {
-    body += '<tr><td class="num">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td class="' + (c.d === t ? 'today' : '') + '">' + (c.stops[i] ? cell(c.stops[i], c.d) : '') + '</td>'; }).join('') + '</tr>';
+    body += '<tr><td class="num">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td data-drop="' + c.d + '" class="' + (c.d === t ? 'today' : '') + '">' + (c.stops[i] ? cell(c.stops[i], c.d, true) : '') + '</td>'; }).join('') + '</tr>';
   }
   if (cols.some(function (c) { return c.extra.length; })) {
     body += '<tr><td class="num">מחוץ לקו</td>' + cols.map(function (c) { return '<td class="' + (c.d === t ? 'today' : '') + '">' + c.extra.map(function (id) { return cell(id, c.d); }).join('') + '</td>'; }).join('') + '</tr>';
@@ -1524,8 +1536,7 @@ function renderWeek() {
   }).join('') + '</tr>';
   var tb = document.getElementById('wk-table');
   tb.innerHTML = head + '<tbody>' + body + '</tbody>';
-  tb.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
-  tb.querySelectorAll('.route-tag').forEach(function (b) { b.onclick = function () { setPlanDate(b.dataset.d); show('plan'); }; });
+  bindRouteDnD(tb, renderWeek);
 }
 
 /* ===== תצוגה חודשית של הקווים ===== */
@@ -1540,30 +1551,98 @@ function renderRouteMonth() {
   for (var i = 0; i < 42; i++) { var d = addDays(start, i); if (i === 35 && d.slice(0, 7) !== RMONTH) break; days.push(d); }
   var stopHtml = function (id, d) {
     var b = byId[id], ok = b.visits.some(function (v) { return v.date === d && isReal(v); });
-    return '<div class="wk-stop" data-id="' + id + '"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
+    return '<div class="wk-stop" data-id="' + id + '" data-drag-stop="1" data-from="' + d + '" draggable="true"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
   };
+  var tag = function (d, x, prefix) { return '<button type="button" class="route-tag" data-d="' + d + '" data-drag-route="1" draggable="true"><strong>' + (prefix || '') + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'; };
   var info = function (d) { var r = getRoute(d); var st = r ? r.stops.filter(function (id) { return byId[id]; }) : []; return { r: r, st: st }; };
   var el = document.getElementById('rm-body');
   if (window.innerWidth < 760) {
-    var list = days.filter(function (d) { return d.slice(0, 7) === RMONTH && info(d).st.length; });
+    // בטלפון: רשימת הימים עם קו. במצב העברה מוצגים כל ימי החודש, כדי שיהיה לאן להעביר
+    var list = days.filter(function (d) { return d.slice(0, 7) === RMONTH && (MOVE.on || info(d).st.length); });
     el.innerHTML = list.length ? '<div class="list">' + list.map(function (d) {
       var x = info(d);
-      return '<div class="card' + (d === t ? ' rm-today' : '') + '"><button type="button" class="route-tag" data-d="' + d + '"><strong>' + fmtDate(d) + ' · ' + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'
+      if (!x.st.length) return '<div class="card rm-empty-day" data-drop="' + d + '">' + fmtDate(d) + '<span class="meta"> · אין קו</span></div>';
+      return '<div class="card' + (d === t ? ' rm-today' : '') + '" data-drop="' + d + '">' + tag(d, x, fmtDate(d) + ' · ')
         + '<div class="rm-stops">' + x.st.map(function (id) { return stopHtml(id, d); }).join('') + '</div></div>';
     }).join('') + '</div>' : '<div class="card empty">אין קווים שמורים בחודש הזה.</div>';
   } else {
     el.innerHTML = '<div class="rm-grid">' + ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'].map(function (n) { return '<div class="dow">' + n + '</div>'; }).join('')
       + days.map(function (d) {
         var x = info(d), out = d.slice(0, 7) !== RMONTH, MAX = 6;
-        return '<div class="rm-day' + (out ? ' out' : '') + (d === t ? ' today' : '') + '"><div class="rm-dn">' + Number(d.slice(8)) + '</div>'
-          + (x.st.length ? '<button type="button" class="route-tag" data-d="' + d + '"><strong>' + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'
+        return '<div class="rm-day' + (out ? ' out' : '') + (d === t ? ' today' : '') + '" data-drop="' + d + '"><div class="rm-dn">' + Number(d.slice(8)) + '</div>'
+          + (x.st.length ? tag(d, x)
             + x.st.slice(0, MAX).map(function (id) { return stopHtml(id, d); }).join('') + (x.st.length > MAX ? '<div class="meta">ועוד ' + (x.st.length - MAX) + '</div>' : '') : '')
           + '</div>';
       }).join('') + '</div>';
   }
-  el.querySelectorAll('.wk-stop').forEach(function (s) { s.onclick = function () { openCard(s.dataset.id); }; });
-  el.querySelectorAll('.route-tag').forEach(function (b) { b.onclick = function () { setPlanDate(b.dataset.d); show('plan'); }; });
+  bindRouteDnD(el, renderRouteMonth);
 }
+
+/* ===== גרירה והעברה בין ימים (כמו ביומן גוגל) =====
+ * קו שלם: גוררים את הכותרת. אם ביום החדש כבר יש קו, שני הקווים מחליפים ימים.
+ * עסק בודד: גוררים את השם, והוא עובר לקו של היום החדש.
+ * בטלפון (או בלחיצה על "העברה בלחיצות"): לוחצים על הקו או העסק, ואז על היום.
+ */
+var MOVE = { on: false, item: null };
+function routeObj(d) { var r = getRoute(d); return { stops: r ? r.stops.filter(function (id) { return byId[id]; }) : [], title: r ? r.title || '' : '', owner: r ? r.owner || '' : '' }; }
+function doMove(item, to, rerender) {
+  if (!item || !to || item.from === to) return;
+  var start = S.settings['כתובת יציאה'] || '', A = routeObj(item.from), B = routeObj(to), first, second, msg;
+  if (item.type === 'route') {
+    first = [to, A.stops, A.title, A.owner];
+    second = [item.from, B.stops, B.title, B.owner];
+    msg = B.stops.length ? 'הקווים של ' + fmtDate(item.from) + ' ו' + fmtDate(to) + ' החליפו ימים' : 'הקו עבר ל' + fmtDate(to);
+  } else {
+    var b = byId[item.id];
+    first = [to, B.stops.indexOf(item.id) >= 0 ? B.stops : B.stops.concat([item.id]), B.title, B.owner];
+    second = [item.from, A.stops.filter(function (x) { return x !== item.id; }), A.title, A.owner];
+    msg = (b ? b.name : 'העסק') + ' עבר ל' + fmtDate(to);
+  }
+  toast('מעביר…');
+  api('saveRoute', first[0], first[1], start, first[2], first[3])
+    .then(function () { return api('saveRoute', second[0], second[1], start, second[2], second[3]); })
+    .then(function (d) { MOVE.item = null; load(d); rerender(); toast(msg); })
+    .catch(function (err) { toast('לא הועבר: ' + (err.message || err)); });
+}
+function itemFrom(el) {
+  return el.dataset.dragRoute ? { type: 'route', from: el.dataset.d } : { type: 'stop', id: el.dataset.id, from: el.dataset.from };
+}
+function bindRouteDnD(root, rerender) {
+  root.querySelectorAll('[data-drag-route], [data-drag-stop]').forEach(function (el) {
+    el.addEventListener('dragstart', function (e) {
+      var it = itemFrom(el);
+      try { e.dataTransfer.setData('text/plain', JSON.stringify(it)); e.dataTransfer.effectAllowed = 'move'; } catch (x) {}
+      MOVE.drag = it; el.classList.add('dragging');
+    });
+    el.addEventListener('dragend', function () { el.classList.remove('dragging'); MOVE.drag = null; root.querySelectorAll('.drop-hover').forEach(function (x) { x.classList.remove('drop-hover'); }); });
+    el.onclick = function (e) {
+      e.stopPropagation();
+      if (MOVE.on) { MOVE.item = itemFrom(el); root.querySelectorAll('.picked').forEach(function (x) { x.classList.remove('picked'); }); el.classList.add('picked'); updateMoveBar(); return; }
+      if (el.dataset.dragRoute) { setPlanDate(el.dataset.d); show('plan'); } else openCard(el.dataset.id);
+    };
+  });
+  // עסקים שלא בקו (שורת "מחוץ לקו") נשארים לחיצים לכרטיס
+  root.querySelectorAll('.wk-stop:not([data-drag-stop])').forEach(function (el) { el.onclick = function () { openCard(el.dataset.id); }; });
+  root.querySelectorAll('[data-drop]').forEach(function (z) {
+    z.addEventListener('dragover', function (e) { if (!MOVE.drag) return; e.preventDefault(); z.classList.add('drop-hover'); });
+    z.addEventListener('dragleave', function () { z.classList.remove('drop-hover'); });
+    z.addEventListener('drop', function (e) {
+      e.preventDefault(); z.classList.remove('drop-hover');
+      var it = MOVE.drag; try { it = it || JSON.parse(e.dataTransfer.getData('text/plain')); } catch (x) {}
+      doMove(it, z.dataset.drop, rerender);
+    });
+    z.addEventListener('click', function () { if (MOVE.on && MOVE.item) doMove(MOVE.item, z.dataset.drop, rerender); });
+  });
+  updateMoveBar();
+}
+function updateMoveBar() {
+  document.querySelectorAll('.move-toggle').forEach(function (b) { b.setAttribute('aria-pressed', MOVE.on); b.textContent = MOVE.on ? 'סיום העברה' : 'העברה בלחיצות'; });
+  document.querySelectorAll('.move-hint').forEach(function (x) {
+    x.hidden = !MOVE.on;
+    x.textContent = !MOVE.item ? 'לחץ על קו (הכותרת הירוקה) או על עסק שתרצה להעביר' : 'עכשיו לחץ על היום החדש' + (MOVE.item.type === 'route' ? '. אם יש בו קו, שני הקווים יחליפו ימים' : '');
+  });
+}
+function toggleMove(rerender) { MOVE.on = !MOVE.on; MOVE.item = null; rerender(); }
 
 /* ===== לוח בקרה ===== */
 var DASH = { period: 'month', calMonth: null };
@@ -1659,7 +1738,7 @@ function openMore() {
     + tile('plan', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="19" r="2"/><circle cx="18" cy="5" r="2"/><path d="M8 19h7a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h7"/></svg>', 'בניית קו', 'תכנון יום עבודה')
     + tile('today', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/><circle cx="12" cy="10" r="2.5"/></svg>', 'בדרך', 'הקו של היום')
     + tile('follow', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 11l3 3 8-8"/><path d="M20 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>', 'פעולות להמשך', open + ' פתוחות' + (late ? ' · ' + late + ' באיחור' : ''))
-    + tile('summary', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>', 'סיכום ושבוע', 'סיכום חודשי ותצוגה שבועית')
+    + tile('summary', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>', 'תצוגה שבועית וחודשית', 'קווים לפי שבוע וחודש, וסיכום חודשי')
     + tile('data', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10M3 15h18"/></svg>', 'כל הנתונים', 'טבלה כמו באקסל, לפי דחיפות')
     + tile('open', '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>', 'מה מחכה לי', 'לקוחות שהוזנחו לפי אזור')
     + '</div>');
@@ -1954,6 +2033,8 @@ document.getElementById('wk-prev').addEventListener('click', function () { WEEK0
 document.getElementById('wk-next').addEventListener('click', function () { WEEK0 = addDays(WEEK0, 7); renderWeek(); });
 document.getElementById('rm-prev').addEventListener('click', function () { var y = Number(RMONTH.slice(0, 4)), m = Number(RMONTH.slice(5, 7)) - 2; RMONTH = iso(new Date(y, m, 15)).slice(0, 7); renderRouteMonth(); });
 document.getElementById('rm-next').addEventListener('click', function () { var y = Number(RMONTH.slice(0, 4)), m = Number(RMONTH.slice(5, 7)); RMONTH = iso(new Date(y, m, 15)).slice(0, 7); renderRouteMonth(); });
+document.getElementById('wk-move').addEventListener('click', function () { toggleMove(renderWeek); });
+document.getElementById('rm-move').addEventListener('click', function () { toggleMove(renderRouteMonth); });
 document.getElementById('rm-today').addEventListener('click', function () { RMONTH = todayIso().slice(0, 7); renderRouteMonth(); });
 document.getElementById('wk-today').addEventListener('click', function () { WEEK0 = weekStart(todayIso()); renderWeek(); });
 document.getElementById('data-q').addEventListener('input', renderData);
@@ -2045,7 +2126,7 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.2';
+var APP_VERSION = 'גרסה 7.3';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
@@ -2055,6 +2136,10 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7.3': [
+    ['גרירה בין ימים', 'בתצוגה השבועית והחודשית: גוררים כותרת של קו ליום אחר. אם יש שם קו, שני הקווים מחליפים ימים. אפשר גם לגרור עסק בודד מקו לקו. בטלפון: כפתור "העברה בלחיצות".'],
+    ['שם חדש', '"סיכום ושבוע" נקרא עכשיו "תצוגה שבועית וחודשית".']
+  ],
   'גרסה 7.2': [
     ['מי ביקר', 'בסיכום ביקור בוחרים מי ביקר (אריאל / אפרת). האתר זוכר אותך בכל מכשיר. השם מופיע בהיסטוריה, בטבלאות ובסיכום החודשי.'],
     ['כותרת לכל קו', 'בבניית קו: "כותרת הקו" (מתמלאת לבד לפי האזור) ו"של מי הקו". הכותרת מופיעה בתצוגה השבועית, בחודשית ובמסך "בדרך".'],
