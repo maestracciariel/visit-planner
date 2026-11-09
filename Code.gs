@@ -104,6 +104,16 @@ function readTable_(name) {
   });
 }
 
+function keyText_(v) {
+  if (v instanceof Date) return Utilities.formatDate(v, 'Asia/Jerusalem', 'yyyy-MM-dd');
+  return String(v);
+}
+
+/**
+ * שמירה לפי מפתח: מעדכן את השורה הקיימת או מוסיף שורה חדשה.
+ * משווה תאריכים לפי הערך האמיתי (לא לפי איך שהם מוצגים בגיליון),
+ * ואם יש כמה שורות לאותו מפתח (קרה בקווים), משאיר אחת ומוחק את הכפילויות.
+ */
 function upsert_(name, cols, keyCol, obj) {
   var sh = SpreadsheetApp.getActive().getSheetByName(name);
   if (sh.getLastColumn() > 0) {
@@ -112,17 +122,21 @@ function upsert_(name, cols, keyCol, obj) {
   }
   var row = cols.map(function (c) { return obj[c] === undefined || obj[c] === null ? '' : obj[c]; });
   var keyIdx = cols.indexOf(keyCol);
-  var last = sh.getLastRow();
+  var want = String(obj[keyCol]);
+  var last = sh.getLastRow(), found = [];
   if (last >= 2) {
-    var keys = sh.getRange(2, keyIdx + 1, last - 1, 1).getDisplayValues();
-    for (var i = 0; i < keys.length; i++) {
-      if (String(keys[i][0]) === String(obj[keyCol])) {
-        sh.getRange(i + 2, 1, 1, cols.length).setValues([row]);
-        return;
-      }
-    }
+    var keys = sh.getRange(2, keyIdx + 1, last - 1, 1).getValues();
+    for (var i = 0; i < keys.length; i++) if (keyText_(keys[i][0]) === want) found.push(i + 2);
   }
-  sh.appendRow(row);
+  var target;
+  if (found.length) {
+    target = found[0];
+    for (var j = found.length - 1; j >= 1; j--) sh.deleteRow(found[j]); // כפילויות ישנות
+  } else {
+    target = sh.getLastRow() + 1;
+  }
+  if (name === SHEETS.routes) sh.getRange(target, keyIdx + 1).setNumberFormat('@'); // תאריך הקו נשמר כטקסט
+  sh.getRange(target, 1, 1, cols.length).setValues([row]);
 }
 
 function newId_(prefix) {
@@ -358,7 +372,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 7;
+var CODE_VERSION = 8;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {

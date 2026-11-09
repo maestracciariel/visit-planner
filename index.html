@@ -803,6 +803,10 @@ function toast(msg) { var t = document.getElementById('toast'); t.textContent = 
 
 function load(data) {
   S = data;
+  // אם בגיליון יש כמה שורות לאותו תאריך בקווים, השורה האחרונה היא העדכנית
+  var lastByDate = {};
+  (S.routes || []).forEach(function (r) { if (r.date) lastByDate[r.date] = r; });
+  S.routes = Object.keys(lastByDate).map(function (d) { return lastByDate[d]; });
   byId = {};
   S.businesses.forEach(function (b) { b.visits = []; byId[b.id] = b; });
   S.visits.sort(function (a, b) { return a.date < b.date ? 1 : -1; });
@@ -2126,7 +2130,7 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.3';
+var APP_VERSION = 'גרסה 7.3.1';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
