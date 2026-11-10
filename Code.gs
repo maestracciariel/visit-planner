@@ -242,6 +242,20 @@ function saveBusiness(b) {
   return getData();
 }
 
+/** שמירה של כמה קווים בקריאה אחת (החלפת ימים בגרירה). או שכולם נשמרים, או ששום דבר לא משתנה */
+function saveRoutes(list) {
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    ensureColumns_(SHEETS.routes, ROUTE_COLS);
+    (list || []).forEach(function (r) {
+      upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', { 'תאריך': r.date, 'עצירות': (r.stops || []).join(','), 'נקודת התחלה': r.start || '', 'כותרת': r.title || '', 'של מי': r.owner || '' });
+    });
+    SpreadsheetApp.flush();
+  } finally { lock.releaseLock(); }
+  return getData();
+}
+
 function saveRoute(date, stops, start, title, owner) {
   ensureColumns_(SHEETS.routes, ROUTE_COLS);
   upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', { 'תאריך': date, 'עצירות': stops.join(','), 'נקודת התחלה': start || '', 'כותרת': title || '', 'של מי': owner || '' });
@@ -372,7 +386,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 8;
+var CODE_VERSION = 9;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {

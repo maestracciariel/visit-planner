@@ -475,6 +475,8 @@ table.data.week th.today { background: var(--accent-strong); color: #fff; box-sh
 .move-hint { background: #fff4e5; border: 1px solid #f5c98b; color: #7a4a00; border-radius: 10px; padding: 8px 12px; margin-bottom: 10px; font-weight: 600; }
 .move-toggle[aria-pressed="true"] { background: var(--brand-orange); color: #fff; }
 .rm-empty-day { padding: 10px 14px; cursor: pointer; }
+.toast { display: flex; align-items: center; gap: 12px; white-space: normal; max-width: calc(100% - 32px); }
+.toast-btn { border: 0; background: var(--gold); color: #2d2a1c; font: inherit; font-weight: 800; border-radius: 10px; padding: 6px 14px; cursor: pointer; flex: none; }
 /* לוח בקרה */
 #view-dash > * { max-width: 1400px; }
 .kpis-dash { grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); }
@@ -757,6 +759,7 @@ function api(fn) {
   var args = Array.prototype.slice.call(arguments, 1);
   return new Promise(function (resolve, reject) {
     var runner = google.script.run.withSuccessHandler(resolve).withFailureHandler(reject);
+    if (typeof runner[fn] !== 'function') { reject(new Error(fn + ' not found')); return; }
     runner[fn].apply(runner, args);
   });
 }
@@ -799,7 +802,21 @@ function fmtDate(isoStr) {
   var days = ['ראשון', 'שני', 'שלישי', 'רביעי', 'חמישי', 'שישי', 'שבת'];
   return 'יום ' + days[d.getDay()] + ' ' + d.getDate() + '/' + (d.getMonth() + 1);
 }
-function toast(msg) { var t = document.getElementById('toast'); t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600); }
+function toastAction(msg, label, fn) {
+  var t = document.getElementById('toast');
+  t.innerHTML = ''; var sp = document.createElement('span'); sp.textContent = msg; t.appendChild(sp);
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'toast-btn'; b.textContent = label;
+  b.onclick = function () { t.hidden = true; fn(); }; t.appendChild(b);
+  t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 10000);
+}
+function toastStay(msg) {
+  var t = document.getElementById('toast');
+  t.innerHTML = ''; var sp = document.createElement('span'); sp.textContent = msg; t.appendChild(sp);
+  var b = document.createElement('button'); b.type = 'button'; b.className = 'toast-btn'; b.textContent = 'סגור';
+  b.onclick = function () { t.hidden = true; }; t.appendChild(b);
+  t.hidden = false; clearTimeout(toast._t);
+}
+function toast(msg) { var t = document.getElementById('toast'); t.innerHTML = ''; t.textContent = msg; t.hidden = false; clearTimeout(toast._t); toast._t = setTimeout(function () { t.hidden = true; }, 2600); }
 
 function load(data) {
   S = data;
@@ -1602,11 +1619,28 @@ function doMove(item, to, rerender) {
     second = [item.from, A.stops.filter(function (x) { return x !== item.id; }), A.title, A.owner];
     msg = (b ? b.name : 'העסק') + ' עבר ל' + fmtDate(to);
   }
+  var before = [[item.from, A.stops, A.title, A.owner], [to, B.stops, B.title, B.owner]];
   toast('מעביר…');
-  api('saveRoute', first[0], first[1], start, first[2], first[3])
-    .then(function () { return api('saveRoute', second[0], second[1], start, second[2], second[3]); })
-    .then(function (d) { MOVE.item = null; load(d); rerender(); toast(msg); })
-    .catch(function (err) { toast('לא הועבר: ' + (err.message || err)); });
+  saveRouteList([first, second], start).then(function (d) {
+    MOVE.item = null; load(d); rerender();
+    toastAction(msg, 'בטל', function () {
+      toast('מבטל…');
+      saveRouteList(before, start).then(function (d2) { load(d2); rerender(); toast('ההעברה בוטלה'); })
+        .catch(function (e) { toastStay('לא הצלחתי לבטל: ' + (e.message || e) + '. רענן את הדף ובדוק.'); });
+    });
+  }).catch(function (err) {
+    // אם משהו נכשל באמצע, מחזירים את שני הימים למצב שלפני
+    saveRouteList(before, start).then(function (d) { load(d); rerender(); }, function () {});
+    toastStay('ההעברה לא הצליחה ולכן לא בוצעה: ' + (err.message || err) + '. אפשר לנסות שוב.');
+  });
+}
+/* שמירת כמה קווים יחד: קריאה אחת לשרת (saveRoutes). אם השרת עוד בגרסה ישנה, שומרים אחד-אחד */
+function saveRouteList(list, start) {
+  var payload = list.map(function (x) { return { date: x[0], stops: x[1], start: start, title: x[2] || '', owner: x[3] || '' }; });
+  return api('saveRoutes', payload).catch(function (err) {
+    if (!/saveRoutes|not found|לא נמצא/i.test(String(err && err.message || err))) throw err;
+    return list.reduce(function (p, x) { return p.then(function () { return api('saveRoute', x[0], x[1], start, x[2] || '', x[3] || ''); }); }, Promise.resolve());
+  });
 }
 function itemFrom(el) {
   return el.dataset.dragRoute ? { type: 'route', from: el.dataset.d } : { type: 'stop', id: el.dataset.id, from: el.dataset.from };
@@ -2130,7 +2164,7 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.3.1';
+var APP_VERSION = 'גרסה 7.4';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
@@ -2140,6 +2174,10 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7.4': [
+    ['העברה בטוחה יותר', 'החלפת קווים בין ימים נשמרת עכשיו בבת אחת. אם משהו נכשל באמצע, שני הימים חוזרים למצב שלפני, ומופיעה הודעה שנשארת על המסך.'],
+    ['כפתור "בטל"', 'אחרי כל העברה בגרירה מופיע למשך 10 שניות כפתור "בטל", שמחזיר את שני הימים למצב שלפני.']
+  ],
   'גרסה 7.3': [
     ['גרירה בין ימים', 'בתצוגה השבועית והחודשית: גוררים כותרת של קו ליום אחר. אם יש שם קו, שני הקווים מחליפים ימים. אפשר גם לגרור עסק בודד מקו לקו. בטלפון: כפתור "העברה בלחיצות".'],
     ['שם חדש', '"סיכום ושבוע" נקרא עכשיו "תצוגה שבועית וחודשית".']
