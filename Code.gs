@@ -15,7 +15,7 @@ var BIZ_COLS = ['id', 'שם העסק', 'סוג', 'סטטוס', 'אזור', 'אי
   'אימייל', 'שעות פתיחה', 'אתר / אינסטגרם', 'שם חברה / ח.פ'];
 var VISIT_COLS = ['id', 'תאריך', 'businessId', 'שם העסק', 'תוצאה', 'כפתורים', 'מה נאמר', 'פעולת המשך', 'תאריך המשך', 'התעניינות', 'המשך פתוח', 'נוצר', 'מי ביקר'];
 var ROUTE_COLS = ['תאריך', 'עצירות', 'נקודת התחלה', 'כותרת', 'של מי', 'שעת התחלה', 'שעת סיום', 'אירוע ביומן'];
-var CAL_NAME = 'קווי ביקור';
+var CAL_NAME = 'קווי ביקור', CAL_MARK = 'קו ביקורים ממתכנן הביקורים';
 var RESULT_HE = { prep: 'הכנה לפגישה', note: 'הערה', done: 'ביקרתי', owner_absent: 'הבעלים לא היה', closed_door: 'היה סגור', phone: 'שיחת טלפון', cancelled: 'בוטל' };
 function resultCode_(he) { for (var k in RESULT_HE) if (RESULT_HE[k] === he) return k; return he; }
 
@@ -260,10 +260,14 @@ function saveRoutes(list) {
 }
 
 function saveRoute(date, stops, start, title, owner, startTime, endTime) {
-  ensureColumns_(SHEETS.routes, ROUTE_COLS);
-  writeRoute_({ date: date, stops: stops, start: start, title: title, owner: owner, startTime: startTime, endTime: endTime });
-  SpreadsheetApp.flush();
-  syncRouteEvent_(date);
+  var lock = LockService.getScriptLock();
+  lock.waitLock(20000);
+  try {
+    ensureColumns_(SHEETS.routes, ROUTE_COLS);
+    writeRoute_({ date: date, stops: stops, start: start, title: title, owner: owner, startTime: startTime, endTime: endTime });
+    SpreadsheetApp.flush();
+    syncRouteEvent_(date);
+  } finally { lock.releaseLock(); }
   return getData();
 }
 
@@ -330,6 +334,14 @@ function syncRouteEvent_(date) {
     var stops = String(r['עצירות'] || '').split(',').filter(function (id) { return byId[id]; }).map(function (id) { return byId[id]; });
     var evId = r['אירוע ביומן'], ev = null;
     if (evId) { try { ev = cal.getEventById(evId); } catch (e) { ev = null; } }
+    // הגנה מכפילויות: מחפשים ביום הזה את כל האירועים שהאתר יצר. משאירים אחד ומוחקים את השאר.
+    var d0 = String(date).split('-').map(Number), dayA = new Date(d0[0], d0[1] - 1, d0[2]), dayB = new Date(d0[0], d0[1] - 1, d0[2] + 1);
+    cal.getEvents(dayA, dayB).filter(function (x) {
+      return x.getTag('vpDate') === String(date) || String(x.getDescription() || '').indexOf(CAL_MARK) === 0;
+    }).forEach(function (x) {
+      if (!ev) ev = x;
+      else if (x.getId() !== ev.getId()) x.deleteEvent();
+    });
     if (!stops.length) {
       if (ev) ev.deleteEvent();
       if (evId) { r['אירוע ביומן'] = ''; upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', r); }
@@ -343,15 +355,14 @@ function syncRouteEvent_(date) {
     var a = hm_(r['שעת התחלה'] || set['שעת התחלה ביומן'], [8, 0]), z = hm_(r['שעת סיום'] || set['שעת סיום ביומן'], [16, 0]);
     var start = new Date(d[0], d[1] - 1, d[2], a[0], a[1]), end = new Date(d[0], d[1] - 1, d[2], z[0], z[1]);
     if (end <= start) end = new Date(start.getTime() + 8 * 3600000);
-    var desc = 'קו ביקורים ממתכנן הביקורים\n\n' + stops.map(function (b, i) {
+    var desc = CAL_MARK + '\n\n' + stops.map(function (b, i) {
       return (i + 1) + '. ' + b['שם העסק'] + (b['כתובת'] ? ' — ' + b['כתובת'] : '') + (b['טלפון'] ? ' · ' + b['טלפון'] : '');
     }).join('\n') + '\n\nפתיחת הקו בגוגל מפות:\n' + routeLinks_(stops, set['כתובת יציאה']).join('\n');
     var loc = stops[0]['כתובת'] || navPoint_(stops[0]);
     if (ev) { ev.setTitle(title); ev.setTime(start, end); ev.setDescription(desc); ev.setLocation(loc); }
-    else {
-      ev = cal.createEvent(title, start, end, { description: desc, location: loc });
-      r['אירוע ביומן'] = ev.getId(); upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', r);
-    }
+    else ev = cal.createEvent(title, start, end, { description: desc, location: loc });
+    ev.setTag('vpDate', String(date));
+    if (ev.getId() !== evId) { r['אירוע ביומן'] = ev.getId(); upsert_(SHEETS.routes, ROUTE_COLS, 'תאריך', r); }
     props.deleteProperty('calError');
   } catch (e) {
     props.setProperty('calError', String(e.message || e).slice(0, 300));
@@ -363,9 +374,10 @@ function connectCalendar() {
   var props = PropertiesService.getScriptProperties();
   var cal = calendar_(); props.deleteProperty('calError');
   var today = Utilities.formatDate(new Date(), 'Asia/Jerusalem', 'yyyy-MM-dd'), n = 0;
+  var seen = {};
   readTable_(SHEETS.routes).forEach(function (r) {
     var d = keyText_(r['תאריך']);
-    if (d >= today && String(r['עצירות'] || '').length) { syncRouteEvent_(d); n++; }
+    if (d >= today && !seen[d] && String(r['עצירות'] || '').length) { seen[d] = 1; syncRouteEvent_(d); n++; }
   });
   var err = props.getProperty('calError');
   var msg = err ? 'היומן חובר, אבל הייתה תקלה: ' + err : 'מחובר ליומן "' + CAL_NAME + '". נוספו ' + n + ' קווים מהיום והלאה.';
@@ -498,7 +510,7 @@ function optimizeRoute(stopIds, startAddress) {
  * מחליף לבד את הקוד שלו, יוצר גרסה ומפרסם אותה. לא צריך להדביק יותר כלום.
  * דורש פעם אחת: להפעיל את Google Apps Script API בכתובת script.google.com/home/usersettings
  */
-var CODE_VERSION = 10;
+var CODE_VERSION = 11;
 var REPO_RAW = 'https://raw.githubusercontent.com/maestracciariel/visit-planner/main/';
 
 function setupAutoUpdate() {
