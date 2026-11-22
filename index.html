@@ -588,7 +588,9 @@ table.data.week th.today { background: var(--accent-strong); color: #fff; box-sh
     <div class="route-meta">
       <div class="field" style="margin:0;flex:1 1 220px"><label for="plan-title">כותרת הקו</label><input id="plan-title" placeholder="תתמלא לבד לפי האזור"></div>
       <div class="field" style="margin:0"><label>של מי הקו</label><div class="chips-row" id="plan-owner"></div></div>
+      <div class="field" style="margin:0"><label for="plan-start">שעות ביומן</label><div style="display:flex;gap:6px;align-items:center"><input type="time" id="plan-start" step="900" style="width:auto"><span class="meta">עד</span><input type="time" id="plan-end" step="900" style="width:auto"></div></div>
     </div>
+    <div class="meta" id="plan-cal" style="margin:-4px 0 10px"></div>
     <div class="list" id="plan-stops"></div>
     <div class="summary-line" id="plan-summary"></div>
     <div class="btns">
@@ -779,6 +781,15 @@ function routeRegion(stops) {
   return top ? 'אזור ' + top : '';
 }
 function routeTitle(r) { if (!r) return ''; var st = r.stops.filter(function (id) { return byId[id]; }); return r.title || routeRegion(st) || 'קו'; }
+function defHours() { var st = S.settings || {}; return [String(st['שעת התחלה ביומן'] || '08:00').slice(0, 5), String(st['שעת סיום ביומן'] || '16:00').slice(0, 5)]; }
+function routeHours(r) { return r && r.startTime ? r.startTime + (r.endTime ? '–' + r.endTime : '') : ''; }
+function calStatusText() {
+  var c = S.calendar;
+  if (!c) return '';
+  if (c.error) return '⚠️ היומן: ' + c.error;
+  return c.connected ? '📅 הקו יופיע ביומן "קווי ביקור" בשעות האלה' : '';
+}
+function calWarn() { if (S.calendar && S.calendar.error) toastStay('הקו נשמר, אבל היומן לא עודכן: ' + S.calendar.error); }
 function getRoute(d) { return S.routes.filter(function (x) { return x.date === d; })[0]; }
 var COLORS = {
   green: { label: 'ביקרתי החודש', css: 'var(--c-green)', hex: '#22a05a' },
@@ -1005,7 +1016,11 @@ function setPlanDate(d) {
   plan.stops = r ? r.stops.filter(function (id) { return byId[id]; }) : [];
   plan.title = r ? (r.title || '') : '';
   plan.owner = r ? (r.owner || '') : me();
+  plan.startTime = (r && r.startTime) || defHours()[0];
+  plan.endTime = (r && r.endTime) || defHours()[1];
   document.getElementById('plan-title').value = plan.title;
+  document.getElementById('plan-start').value = plan.startTime;
+  document.getElementById('plan-end').value = plan.endTime;
   plan.km = plan.minutes = null;
   document.getElementById('plan-date').value = d;
   renderPlan();
@@ -1024,6 +1039,7 @@ function renderPlan() {
   ow.innerHTML = team().map(function (n) { return '<button type="button" class="fchip" data-n="' + h(n) + '" aria-pressed="' + (plan.owner === n) + '">' + h(n) + '</button>'; }).join('');
   ow.querySelectorAll('.fchip').forEach(function (b) { b.onclick = function () { plan.owner = plan.owner === b.dataset.n ? '' : b.dataset.n; renderPlan(); }; });
   document.getElementById('plan-manage').hidden = !savedRoute(plan.date);
+  document.getElementById('plan-cal').textContent = calStatusText();
   var delBtn = document.getElementById('btn-del-route'); delBtn.dataset.sure = ''; delBtn.textContent = 'מחיקת הקו';
   document.getElementById('plan-count').textContent = plan.stops.length + ' עצירות · ' + fmtDate(plan.date);
   var el = document.getElementById('plan-stops');
@@ -1103,7 +1119,7 @@ function renderToday() {
   var el = document.getElementById('today-list');
   if (!stops.length) { el.innerHTML = '<div class="card empty">אין קו שמור ל' + fmtDate(d) + '. בנה אותו במסך "בניית קו".</div>'; return; }
   var links = routeLinks(stops).map(function (l) { return '<a class="btn" href="' + l.url + '" target="_blank" rel="noopener">' + l.label + '</a>'; }).join('');
-  el.innerHTML = '<div class="route-head"><strong>' + h(routeTitle(r)) + '</strong><span class="meta">' + stops.length + ' עצירות' + (r.owner ? ' · ' + h(r.owner) : '') + '</span></div>'
+  el.innerHTML = '<div class="route-head"><strong>' + h(routeTitle(r)) + '</strong><span class="meta">' + stops.length + ' עצירות' + (r.owner ? ' · ' + h(r.owner) : '') + (routeHours(r) ? ' · ' + routeHours(r) : '') + '</span></div>'
     + '<div class="btns" style="margin-top:0">' + links + '</div>' + stops.map(function (id, i) {
     var b = byId[id];
     var todayV = b.visits.filter(function (v) { return v.date === d; })[0];
@@ -1543,7 +1559,7 @@ function renderWeek() {
   };
   var head = '<thead><tr><th>עצירה</th>' + cols.map(function (c, i) { return '<th class="' + (c.d === t ? 'today' : '') + '">' + DAYS_HE[i] + ' ' + Number(c.d.slice(8)) + '/' + Number(c.d.slice(5, 7)) + '</th>'; }).join('') + '</tr></thead>';
   var body = '<tr class="wk-titles"><td class="num">קו</td>' + cols.map(function (c) {
-    return '<td data-drop="' + c.d + '" class="' + (c.d === t ? 'today' : '') + '">' + (c.stops.length ? '<button type="button" class="route-tag" data-d="' + c.d + '" data-drag-route="1" draggable="true"><strong>' + h(routeTitle(c.r)) + '</strong><span>' + c.stops.length + ' עצירות' + (c.r.owner ? ' · ' + h(c.r.owner) : '') + '</span></button>' : '') + '</td>';
+    return '<td data-drop="' + c.d + '" class="' + (c.d === t ? 'today' : '') + '">' + (c.stops.length ? '<button type="button" class="route-tag" data-d="' + c.d + '" data-drag-route="1" draggable="true"><strong>' + h(routeTitle(c.r)) + '</strong><span>' + c.stops.length + ' עצירות' + (c.r.owner ? ' · ' + h(c.r.owner) : '') + (routeHours(c.r) ? ' · ' + routeHours(c.r) : '') + '</span></button>' : '') + '</td>';
   }).join('') + '</tr>';
   for (var i = 0; i < rowsN; i++) {
     body += '<tr><td class="num">' + (i + 1) + '</td>' + cols.map(function (c) { return '<td data-drop="' + c.d + '" class="' + (c.d === t ? 'today' : '') + '">' + (c.stops[i] ? cell(c.stops[i], c.d, true) : '') + '</td>'; }).join('') + '</tr>';
@@ -1574,7 +1590,7 @@ function renderRouteMonth() {
     var b = byId[id], ok = b.visits.some(function (v) { return v.date === d && isReal(v); });
     return '<div class="wk-stop" data-id="' + id + '" data-drag-stop="1" data-from="' + d + '" draggable="true"><span class="dot ' + b.color + '"></span><span>' + h(b.name) + '</span>' + (ok ? '<span class="ok">✓</span>' : '') + '</div>';
   };
-  var tag = function (d, x, prefix) { return '<button type="button" class="route-tag" data-d="' + d + '" data-drag-route="1" draggable="true"><strong>' + (prefix || '') + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + '</span></button>'; };
+  var tag = function (d, x, prefix) { return '<button type="button" class="route-tag" data-d="' + d + '" data-drag-route="1" draggable="true"><strong>' + (prefix || '') + h(routeTitle(x.r)) + '</strong><span>' + x.st.length + ' עצירות' + (x.r.owner ? ' · ' + h(x.r.owner) : '') + (routeHours(x.r) ? ' · ' + routeHours(x.r) : '') + '</span></button>'; };
   var info = function (d) { var r = getRoute(d); var st = r ? r.stops.filter(function (id) { return byId[id]; }) : []; return { r: r, st: st }; };
   var el = document.getElementById('rm-body');
   if (window.innerWidth < 760) {
@@ -1605,24 +1621,25 @@ function renderRouteMonth() {
  * בטלפון (או בלחיצה על "העברה בלחיצות"): לוחצים על הקו או העסק, ואז על היום.
  */
 var MOVE = { on: false, item: null };
-function routeObj(d) { var r = getRoute(d); return { stops: r ? r.stops.filter(function (id) { return byId[id]; }) : [], title: r ? r.title || '' : '', owner: r ? r.owner || '' : '' }; }
+function routeObj(d) { var r = getRoute(d); return { stops: r ? r.stops.filter(function (id) { return byId[id]; }) : [], title: r ? r.title || '' : '', owner: r ? r.owner || '' : '', startTime: r ? r.startTime || '' : '', endTime: r ? r.endTime || '' : '' }; }
 function doMove(item, to, rerender) {
   if (!item || !to || item.from === to) return;
   var start = S.settings['כתובת יציאה'] || '', A = routeObj(item.from), B = routeObj(to), first, second, msg;
   if (item.type === 'route') {
-    first = [to, A.stops, A.title, A.owner];
-    second = [item.from, B.stops, B.title, B.owner];
+    first = [to, A.stops, A.title, A.owner, A.startTime, A.endTime];
+    second = [item.from, B.stops, B.title, B.owner, B.startTime, B.endTime];
     msg = B.stops.length ? 'הקווים של ' + fmtDate(item.from) + ' ו' + fmtDate(to) + ' החליפו ימים' : 'הקו עבר ל' + fmtDate(to);
   } else {
     var b = byId[item.id];
-    first = [to, B.stops.indexOf(item.id) >= 0 ? B.stops : B.stops.concat([item.id]), B.title, B.owner];
-    second = [item.from, A.stops.filter(function (x) { return x !== item.id; }), A.title, A.owner];
+    first = [to, B.stops.indexOf(item.id) >= 0 ? B.stops : B.stops.concat([item.id]), B.title, B.owner, B.startTime, B.endTime];
+    second = [item.from, A.stops.filter(function (x) { return x !== item.id; }), A.title, A.owner, A.startTime, A.endTime];
     msg = (b ? b.name : 'העסק') + ' עבר ל' + fmtDate(to);
   }
-  var before = [[item.from, A.stops, A.title, A.owner], [to, B.stops, B.title, B.owner]];
+  var before = [[item.from, A.stops, A.title, A.owner, A.startTime, A.endTime], [to, B.stops, B.title, B.owner, B.startTime, B.endTime]];
   toast('מעביר…');
   saveRouteList([first, second], start).then(function (d) {
     MOVE.item = null; load(d); rerender();
+    if (S.calendar && S.calendar.error) { calWarn(); return; }
     toastAction(msg, 'בטל', function () {
       toast('מבטל…');
       saveRouteList(before, start).then(function (d2) { load(d2); rerender(); toast('ההעברה בוטלה'); })
@@ -1636,10 +1653,10 @@ function doMove(item, to, rerender) {
 }
 /* שמירת כמה קווים יחד: קריאה אחת לשרת (saveRoutes). אם השרת עוד בגרסה ישנה, שומרים אחד-אחד */
 function saveRouteList(list, start) {
-  var payload = list.map(function (x) { return { date: x[0], stops: x[1], start: start, title: x[2] || '', owner: x[3] || '' }; });
+  var payload = list.map(function (x) { return { date: x[0], stops: x[1], start: start, title: x[2] || '', owner: x[3] || '', startTime: x[4] || '', endTime: x[5] || '' }; });
   return api('saveRoutes', payload).catch(function (err) {
     if (!/saveRoutes|not found|לא נמצא/i.test(String(err && err.message || err))) throw err;
-    return list.reduce(function (p, x) { return p.then(function () { return api('saveRoute', x[0], x[1], start, x[2] || '', x[3] || ''); }); }, Promise.resolve());
+    return list.reduce(function (p, x) { return p.then(function () { return api('saveRoute', x[0], x[1], start, x[2] || '', x[3] || '', x[4] || '', x[5] || ''); }); }, Promise.resolve());
   });
 }
 function itemFrom(el) {
@@ -2144,8 +2161,8 @@ function openMoveRoute() {
     go.disabled = true; go.textContent = 'מעביר…';
     var start = S.settings['כתובת יציאה'] || '';
     var fromR = getRoute(from) || {}, toR = there || {};
-    api('saveRoute', to, merged, start, toR.title || fromR.title || '', toR.owner || fromR.owner || '').then(function () { return api('saveRoute', from, [], start, '', ''); })
-      .then(function (d) { load(d); closeSheet(); setPlanDate(to); toast('הקו הועבר ל' + fmtDate(to)); })
+    saveRouteList([[to, merged, toR.title || fromR.title || '', toR.owner || fromR.owner || '', toR.startTime || fromR.startTime || plan.startTime || '', toR.endTime || fromR.endTime || plan.endTime || ''], [from, [], '', '']], start)
+      .then(function (d) { load(d); closeSheet(); setPlanDate(to); toast('הקו הועבר ל' + fmtDate(to)); calWarn(); })
       .catch(function (err) { go.disabled = false; go.textContent = 'העבר את הקו'; toast('לא הועבר: ' + (err.message || err)); });
   });
 }
@@ -2154,17 +2171,20 @@ document.getElementById('btn-del-route').addEventListener('click', function () {
   var btn = this;
   if (!btn.dataset.sure) { btn.dataset.sure = '1'; btn.textContent = 'לחץ שוב למחיקה'; return; }
   btn.disabled = true;
-  api('saveRoute', plan.date, [], S.settings['כתובת יציאה'] || '', '', '').then(function (d) { load(d); setPlanDate(plan.date); toast('הקו של ' + fmtDate(plan.date) + ' נמחק'); })
+  api('saveRoute', plan.date, [], S.settings['כתובת יציאה'] || '', '', '').then(function (d) { load(d); setPlanDate(plan.date); toast('הקו של ' + fmtDate(plan.date) + ' נמחק'); calWarn(); })
     .catch(function (err) { toast('לא נמחק: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 document.getElementById('btn-save-route').addEventListener('click', function () {
   var btn = this; btn.disabled = true;
   plan.title = document.getElementById('plan-title').value.trim();
-  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '', plan.title, plan.owner).then(function (d) { var k = plan.km, m = plan.minutes, tt = plan.title, oo = plan.owner; load(d); plan.km = k; plan.minutes = m; plan.title = tt; plan.owner = oo; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); })
+  plan.startTime = document.getElementById('plan-start').value || '';
+  plan.endTime = document.getElementById('plan-end').value || '';
+  if (plan.startTime && plan.endTime && plan.endTime <= plan.startTime) { btn.disabled = false; toast('שעת הסיום צריכה להיות אחרי שעת ההתחלה'); return; }
+  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '', plan.title, plan.owner, plan.startTime, plan.endTime).then(function (d) { var k = plan.km, m = plan.minutes, tt = plan.title, oo = plan.owner, a = plan.startTime, z = plan.endTime; load(d); plan.km = k; plan.minutes = m; plan.title = tt; plan.owner = oo; plan.startTime = a; plan.endTime = z; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); calWarn(); })
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.4';
+var APP_VERSION = 'גרסה 7.5';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
@@ -2174,6 +2194,10 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7.5': [
+    ['קווים ביומן גוגל', 'כל קו שנשמר מופיע ביומן "קווי ביקור" שלך: עם רשימת העצירות וקישור לניווט. שינוי קו מעדכן את היומן, ומחיקת קו מוחקת אותו מהיומן.'],
+    ['בחירת שעות', 'בבניית קו יש עכשיו "שעות ביומן": בוחרים מתי הקו מתחיל ומתי נגמר, וכך הוא יופיע ביומן.']
+  ],
   'גרסה 7.4': [
     ['העברה בטוחה יותר', 'החלפת קווים בין ימים נשמרת עכשיו בבת אחת. אם משהו נכשל באמצע, שני הימים חוזרים למצב שלפני, ומופיעה הודעה שנשארת על המסך.'],
     ['כפתור "בטל"', 'אחרי כל העברה בגרירה מופיע למשך 10 שניות כפתור "בטל", שמחזיר את שני הימים למצב שלפני.']
