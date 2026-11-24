@@ -159,6 +159,15 @@ h3 { font-size: 13px; margin: 26px 0 10px; color: var(--muted); font-weight: 700
   width: 32px; height: 32px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center;
   font-weight: 800; color: #fff; flex: none; font-variant-numeric: tabular-nums; box-shadow: 0 2px 6px rgba(15,27,45,.2);
 }
+.stop-num { border: 0; padding: 0; text-align: center; font-size: 15px; font-family: inherit; -moz-appearance: textfield; appearance: textfield; cursor: text; }
+.stop-num::-webkit-inner-spin-button, .stop-num::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.stop-num:focus { outline: 3px solid var(--c-gold, #e4c679); outline-offset: 2px; }
+.drag-h { cursor: grab; color: var(--muted, #8a948c); font-size: 18px; padding: 0 4px; user-select: none; flex: none; line-height: 1; }
+#plan-stops .card.dragging { opacity: .45; }
+#plan-stops .card.drop-before { box-shadow: 0 -3px 0 var(--accent) inset, 0 3px 0 var(--accent); }
+@media (max-width: 700px), (hover: none) { .drag-h { display: none; } #plan-stops .btn.small { padding: 0 9px; } }
+.unsaved { color: #b5541f; font-weight: 700; font-size: 14px; }
+.btn.attn { box-shadow: 0 0 0 3px color-mix(in srgb, #e46035 45%, transparent); }
 .done-mark { color: var(--c-green); font-weight: 800; font-size: 14px; background: color-mix(in srgb, var(--c-green) 12%, transparent); padding: 3px 10px; border-radius: 999px; }
 .field { display: flex; flex-direction: column; gap: 8px; margin-bottom: 18px; }
 .field label { font-weight: 700; font-size: 14px; }
@@ -1021,7 +1030,7 @@ function setPlanDate(d) {
   document.getElementById('plan-title').value = plan.title;
   document.getElementById('plan-start').value = plan.startTime;
   document.getElementById('plan-end').value = plan.endTime;
-  plan.km = plan.minutes = null;
+  plan.km = plan.minutes = null; plan.dirty = false;
   document.getElementById('plan-date').value = d;
   renderPlan();
 }
@@ -1030,6 +1039,36 @@ function dateChips(elId, current, pick) {
   var el = document.getElementById(elId);
   el.innerHTML = opts.map(function (o) { return '<button type="button" class="fchip" data-d="' + o[0] + '" aria-pressed="' + (o[0] === current) + '">' + o[1] + ' · ' + Number(o[0].slice(8)) + '/' + Number(o[0].slice(5, 7)) + '</button>'; }).join('');
   el.querySelectorAll('.fchip').forEach(function (b) { b.onclick = function () { pick(b.dataset.d); }; });
+}
+/* סדר הנסיעה: המספר ליד העסק הוא המקום שלו בקו. שינוי מספר או גרירה מזיזים אותו, וגוגל מפות והיומן נפתחים לפי הסדר הזה */
+function moveStop(from, to) {
+  var n = plan.stops.length;
+  to = Math.max(0, Math.min(n - 1, to));
+  if (isNaN(to) || from === to || from < 0 || from >= n) { renderPlan(); return; }
+  var x = plan.stops.splice(from, 1)[0];
+  plan.stops.splice(to, 0, x);
+  plan.km = plan.minutes = null; plan.dirty = true;
+  renderPlan();
+  var b = byId[x]; toast((b ? b.name : 'העסק') + ' עבר למקום ' + (to + 1) + '. לחץ "שמור קו" כדי לשמור את הסדר');
+}
+function bindStopOrder() {
+  var root = document.getElementById('plan-stops'), dragFrom = null;
+  root.querySelectorAll('.stop-num').forEach(function (inp) {
+    inp.addEventListener('change', function () { moveStop(Number(inp.dataset.i), Math.round(Number(inp.value)) - 1); });
+    inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') { e.preventDefault(); inp.blur(); } });
+    inp.addEventListener('focus', function () { inp.select(); });
+  });
+  root.querySelectorAll('.card[draggable]').forEach(function (c) {
+    c.addEventListener('dragstart', function (e) {
+      if (e.target.closest && e.target.closest('input,button')) { e.preventDefault(); return; }
+      dragFrom = Number(c.dataset.si); c.classList.add('dragging');
+      try { e.dataTransfer.setData('text/plain', String(dragFrom)); e.dataTransfer.effectAllowed = 'move'; } catch (x) {}
+    });
+    c.addEventListener('dragend', function () { c.classList.remove('dragging'); root.querySelectorAll('.drop-before').forEach(function (x) { x.classList.remove('drop-before'); }); });
+    c.addEventListener('dragover', function (e) { if (dragFrom === null) return; e.preventDefault(); c.classList.add('drop-before'); });
+    c.addEventListener('dragleave', function () { c.classList.remove('drop-before'); });
+    c.addEventListener('drop', function (e) { e.preventDefault(); var from = dragFrom; dragFrom = null; if (from !== null) moveStop(from, Number(c.dataset.si)); });
+  });
 }
 function savedRoute(d) { var r = S.routes.filter(function (x) { return x.date === d; })[0]; return r && r.stops.filter(function (id) { return byId[id]; }).length ? r : null; }
 function renderPlan() {
@@ -1046,8 +1085,9 @@ function renderPlan() {
   if (!plan.stops.length) el.innerHTML = '<div class="card empty">עוד אין עצירות ביום הזה. חפש עסק למטה, או לחץ "+ לקו" על נקודה במפה.</div>';
   else el.innerHTML = plan.stops.map(function (id, i) {
     var b = byId[id];
-    return '<div class="card"><div class="row"><span class="stop-n" style="background:' + COLORS[b.color].hex + '">' + (i + 1) + '</span><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + ' · ' + h(sinceText(b)) + '</div></div>'
+    return '<div class="card" draggable="true" data-si="' + i + '"><div class="row"><span class="drag-h" title="גרור כדי לשנות סדר" aria-hidden="true">⋮⋮</span><input class="stop-n stop-num" type="number" inputmode="numeric" min="1" max="' + plan.stops.length + '" value="' + (i + 1) + '" data-i="' + i + '" aria-label="המקום של ' + h(b.name) + ' בקו" title="כתוב מספר אחר כדי להעביר את העסק למקום הזה" style="background:' + COLORS[b.color].hex + '"><div class="grow"><div class="name linkish" data-act="card" data-id="' + b.id + '">' + h(b.name) + '</div><div class="meta">' + h(b.address || '') + ' · ' + h(sinceText(b)) + '</div></div>'
       + '<button class="btn small" data-act="up" data-i="' + i + '" aria-label="למעלה"' + (i === 0 ? ' disabled' : '') + '>↑</button>'
+      + '<button class="btn small" data-act="down" data-i="' + i + '" aria-label="למטה"' + (i === plan.stops.length - 1 ? ' disabled' : '') + '>↓</button>'
       + '<button class="btn small" data-act="remove" data-i="' + i + '" aria-label="הסרה">✕</button></div></div>';
   }).join('');
   document.getElementById('plan-summary').textContent = plan.km ? 'לפי גוגל: כ-' + plan.km + ' ק״מ וכ-' + Math.floor(plan.minutes / 60) + ':' + String(plan.minutes % 60).padStart(2, '0') + ' שעות נהיגה (בלי זמן העצירות).' : '';
@@ -1055,6 +1095,9 @@ function renderPlan() {
   renderSuggest();
   drawPlanOnMap();
   bindActions(document.getElementById('view-plan'));
+  bindStopOrder();
+  var sv = document.getElementById('btn-save-route'); sv.classList.toggle('attn', !!plan.dirty);
+  sv.textContent = plan.dirty ? 'שמור קו (יש שינויים)' : 'שמור קו';
 }
 function routeLinks(stops) {
   var bs = stops.map(function (id) { return byId[id]; }).filter(Boolean);
@@ -1105,7 +1148,7 @@ function renderSuggest() {
 }
 function addToPlan(id) {
   if (plan.stops.indexOf(id) >= 0) { toast('כבר בקו'); return; }
-  plan.stops.push(id); plan.km = null;
+  plan.stops.push(id); plan.km = null; plan.dirty = true;
   renderPlan();
   toast('נוסף לקו של ' + fmtDate(plan.date));
 }
@@ -2018,8 +2061,9 @@ function onAction(e) {
       .catch(function (err) { t.disabled = false; toast('לא נשמר: ' + (err.message || err)); });
   }
   else if (act === 'close-follow-card') { t.disabled = true; api('closeFollowup', t.dataset.v).then(function (d) { load(d); openCard(t.dataset.id); toast('סומן כבוצע'); }); }
-  else if (act === 'remove') { plan.stops.splice(Number(t.dataset.i), 1); plan.km = null; renderPlan(); }
-  else if (act === 'up') { var i = Number(t.dataset.i); var x = plan.stops.splice(i, 1)[0]; plan.stops.splice(i - 1, 0, x); plan.km = null; renderPlan(); }
+  else if (act === 'remove') { plan.stops.splice(Number(t.dataset.i), 1); plan.km = null; plan.dirty = true; renderPlan(); }
+  else if (act === 'up') { moveStop(Number(t.dataset.i), Number(t.dataset.i) - 1); }
+  else if (act === 'down') { moveStop(Number(t.dataset.i), Number(t.dataset.i) + 1); }
   else if (act === 'close-follow') { t.disabled = true; api('closeFollowup', t.dataset.v).then(function (d) { load(d); toast('סומן כבוצע'); }); }
 }
 function bindActions(root) { root.querySelectorAll('[data-act]').forEach(function (b) { b.onclick = onAction; }); }
@@ -2133,7 +2177,7 @@ document.getElementById('btn-optimize').addEventListener('click', function () {
   if (plan.stops.length < 2) { toast('צריך לפחות 2 עצירות'); return; }
   var btn = this; btn.disabled = true; btn.textContent = 'גוגל מחשב…';
   api('optimizeRoute', plan.stops, S.settings['כתובת יציאה'] || '').then(function (r) {
-    plan.stops = r.order; plan.km = r.km; plan.minutes = r.minutes; renderPlan(); toast('הקו סודר. אל תשכח לשמור.');
+    plan.stops = r.order; plan.dirty = true; plan.km = r.km; plan.minutes = r.minutes; renderPlan(); toast('הקו סודר. אל תשכח לשמור.');
   }).catch(function (err) { toast('לא הצלחתי לסדר: ' + (err.message || err)); })
     .then(function () { btn.disabled = false; btn.textContent = 'סדר לי את הדרך הקצרה'; });
 });
@@ -2180,11 +2224,11 @@ document.getElementById('btn-save-route').addEventListener('click', function () 
   plan.startTime = document.getElementById('plan-start').value || '';
   plan.endTime = document.getElementById('plan-end').value || '';
   if (plan.startTime && plan.endTime && plan.endTime <= plan.startTime) { btn.disabled = false; toast('שעת הסיום צריכה להיות אחרי שעת ההתחלה'); return; }
-  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '', plan.title, plan.owner, plan.startTime, plan.endTime).then(function (d) { var k = plan.km, m = plan.minutes, tt = plan.title, oo = plan.owner, a = plan.startTime, z = plan.endTime; load(d); plan.km = k; plan.minutes = m; plan.title = tt; plan.owner = oo; plan.startTime = a; plan.endTime = z; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); calWarn(); })
+  api('saveRoute', plan.date, plan.stops, S.settings['כתובת יציאה'] || '', plan.title, plan.owner, plan.startTime, plan.endTime).then(function (d) { var k = plan.km, m = plan.minutes, tt = plan.title, oo = plan.owner, a = plan.startTime, z = plan.endTime; load(d); plan.km = k; plan.minutes = m; plan.title = tt; plan.owner = oo; plan.startTime = a; plan.endTime = z; plan.dirty = false; renderPlan(); toast('הקו נשמר ל' + fmtDate(plan.date)); calWarn(); })
     .catch(function (err) { toast('לא נשמר: ' + (err.message || err)); }).then(function () { btn.disabled = false; });
 });
 
-var APP_VERSION = 'גרסה 7.5';
+var APP_VERSION = 'גרסה 7.6';
 document.documentElement.dataset.skin = currentSkin();
 document.getElementById('today-label').textContent = fmtDate(todayIso()) + ' · ' + APP_VERSION;
 document.getElementById('side-version').textContent = APP_VERSION;
@@ -2194,6 +2238,10 @@ setTimeout(function () {
 document.getElementById('today-date').value = todayIso();
 initMap();
 var WHATS_NEW = {
+  'גרסה 7.6': [
+    ['סדר נסיעה', 'בבניית קו, המספר שליד כל עסק הוא המקום שלו בקו. כותבים מספר אחר (למשל 1) והעסק עובר למקום הזה. אפשר גם לגרור עסק למעלה או למטה, או ללחוץ על החיצים ↑ ↓.'],
+    ['גוגל מפות ויומן באותו סדר', 'אחרי "שמור קו", הקישור לגוגל מפות ורשימת העצירות ביומן הולכים לפי הסדר שקבעת.']
+  ],
   'גרסה 7.5': [
     ['קווים ביומן גוגל', 'כל קו שנשמר מופיע ביומן "קווי ביקור" שלך: עם רשימת העצירות וקישור לניווט. שינוי קו מעדכן את היומן, ומחיקת קו מוחקת אותו מהיומן.'],
     ['בחירת שעות', 'בבניית קו יש עכשיו "שעות ביומן": בוחרים מתי הקו מתחיל ומתי נגמר, וכך הוא יופיע ביומן.']
